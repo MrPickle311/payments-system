@@ -1,0 +1,27 @@
+@startuml
+skinparam state {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title Payment State Machine
+
+[*] --> NEW
+
+NEW --> PENDING : INITIATE
+PENDING --> PENDING : REDIRECT
+PENDING --> AUTHORIZED : AUTHORIZE \n[fraudCheckGuard] \n/ feeCalculationAction
+PENDING --> FAILED : FAIL
+PENDING --> CANCELED : CANCEL
+
+AUTHORIZED --> COMPLETED : COMPLETE \n/ settlementAction
+AUTHORIZED --> FAILED : FAIL
+AUTHORIZED --> CANCELED : CANCEL
+AUTHORIZED --> REFUNDED : REFUND \n[refundWindowGuard]
+
+state COMPLETED {
+  COMPLETED : entry / completedEntryAction
+}
+COMPLETED --> REFUNDED : REFUND \n[refundWindowGuard]
+
+@enduml
