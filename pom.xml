@@ -71,7 +71,12 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+        </dependency>
+
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
         </dependency>
 
         <!-- Test -->
@@ -80,10 +85,102 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- jMolecules for DDD concepts -->
+        <dependency>
+            <groupId>org.jmolecules</groupId>
+            <artifactId>jmolecules-ddd</artifactId>
+            <version>1.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jmolecules</groupId>
+            <artifactId>jmolecules-events</artifactId>
+            <version>1.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- ── Code generation: PUML → StateMachineConfig ──────────── -->
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>3.0.2</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals><goal>execute</goal></goals>
+                        <configuration>
+                            <scripts>
+                                <script>file:///${project.basedir}/src/build/generate-statemachine.groovy</script>
+                            </scripts>
+                            <properties>
+                                <property>
+                                    <name>pumlFile</name>
+                                    <value>${project.basedir}/src/main/resources/statemachine.puml</value>
+                                </property>
+                                <property>
+                                    <name>outputDir</name>
+                                    <value>${project.build.directory}/generated-sources/statemachine</value>
+                                </property>
+                                <property>
+                                    <name>packageName</name>
+                                    <value>com.example.payments.payment.infrastructure.config</value>
+                                </property>
+                                <property>
+                                    <name>stateEnum</name>
+                                    <value>com.example.payments.payment.domain.enums.PaymentState</value>
+                                </property>
+                                <property>
+                                    <name>eventEnum</name>
+                                    <value>com.example.payments.payment.domain.enums.PaymentEvent</value>
+                                </property>
+                            </properties>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.groovy</groupId>
+                        <artifactId>groovy</artifactId>
+                        <version>4.0.22</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <!-- Register generated sources for compilation -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/statemachine</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

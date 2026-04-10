@@ -4,24 +4,47 @@ skinparam state {
   BorderColor Black
 }
 
-title Payment State Machine
+title Payment State Machine with Orthogonal Regions
 
 [*] --> NEW
 
-NEW --> PENDING : INITIATE
-PENDING --> PENDING : REDIRECT
-PENDING --> AUTHORIZED : AUTHORIZE \n[fraudCheckGuard] \n/ feeCalculationAction
-PENDING --> FAILED : FAIL
-PENDING --> CANCELED : CANCEL
+NEW --> PROCESSING : INITIATE
 
-AUTHORIZED --> COMPLETED : COMPLETE \n/ settlementAction
-AUTHORIZED --> FAILED : FAIL
-AUTHORIZED --> CANCELED : CANCEL
-AUTHORIZED --> REFUNDED : REFUND \n[refundWindowGuard]
+state PROCESSING {
+  state Authorization {
+    [*] --> AUTH_PENDING
+
+    AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n[fraudCheckGuard]\n/ feeCalculationAction\n  (err: feeCalculationErrorAction)
+    AUTH_PENDING --> AUTH_REJECTED : AUTHORIZE\n[fraudCheckGuard → HIGH risk]
+  }
+
+  --
+
+  state FraudCheck {
+    [*] --> FRAUD_EVALUATING
+    FRAUD_EVALUATING --> FRAUD_PASSED  : FRAUD_CLEAR
+    FRAUD_EVALUATING --> FRAUD_DETECTED : FRAUD_ALERT
+  }
+}
+
+PROCESSING --> COMPLETED : COMPLETE\n/ settlementAction\n  (err: settlementErrorAction)
+note on link
+  **Guard:** AUTH_APPROVED
+  **AND** FRAUD_PASSED
+end note
+
+PROCESSING --> FAILED : FAIL
+note on link
+  AUTH_REJECTED
+  **OR** FRAUD_DETECTED
+end note
+
+PROCESSING --> CANCELED : CANCEL
 
 state COMPLETED {
-  COMPLETED : entry / completedEntryAction
+  COMPLETED : entry / completedEntryAction\n  (skipped when isRestoring=true)
 }
-COMPLETED --> REFUNDED : REFUND \n[refundWindowGuard]
+
+COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]\n(30-day window)
 
 @enduml
