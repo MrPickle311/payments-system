@@ -2,6 +2,7 @@ package com.example.payments.payment.infrastructure.external.wallet;
 
 import com.example.payments.common.dto.DebitRequest;
 import com.example.payments.common.dto.DebitResponse;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,9 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class WalletClient {
 
+    @Value("${wallet.service.url}")
+    private String walletServiceUrl;
+
     private final RestTemplate restTemplate = new RestTemplate(); // For simplicity, using RestTemplate
 
     public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
@@ -29,9 +33,7 @@ public class WalletClient {
                 .currency(currency)
                 .build();
         
-        // In a real microservice scenario, "http://wallet-service/wallets/debit"
-        // Here we're using localhost for demo
-        String url = "http://localhost:8080/wallets/debit"; 
+        String url = walletServiceUrl + "/wallets/debit"; 
         
         try {
             return restTemplate.postForObject(url, request, DebitResponse.class);
