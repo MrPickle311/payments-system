@@ -18,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Collection;
 
 /**
  * Orchestrates payment lifecycle operations.
@@ -74,13 +75,16 @@ public class PaymentService {
 
             stateMachinePersister.restore(sm, payment);
 
+            Collection<PaymentState> stateBeforeIds = sm.getState().getIds();
+            PaymentState rootStateBefore = payment.currentState();
+
             List<StateMachineEventResult<PaymentState, PaymentEvent>> results =
                     sm.sendEvent(Mono.just(
                             MessageBuilder.withPayload(event).build()
                     )).collectList().block();
 
-            PaymentState stateBefore = payment.currentState();
-            PaymentState stateAfter  = sm.getState().getId();
+            Collection<PaymentState> stateAfterIds = sm.getState().getIds();
+            PaymentState rootStateAfter  = sm.getState().getId();
 
             boolean denied = results == null || results.isEmpty()
                     || results.stream().allMatch(
@@ -93,7 +97,7 @@ public class PaymentService {
             }
 
             boolean isSelfTransition = (event == PaymentEvent.REDIRECT);
-            boolean guardBlocked     = !isSelfTransition && (stateAfter == stateBefore);
+            boolean guardBlocked     = !isSelfTransition && stateAfterIds.equals(stateBeforeIds);
 
             if (guardBlocked) {
                 if (event == PaymentEvent.AUTHORIZE) {
@@ -120,7 +124,7 @@ public class PaymentService {
             }
 
             stateMachinePersister.persist(sm, payment);
-            payment.publishStateChange(stateBefore, stateAfter);
+            payment.publishStateChange(rootStateBefore, rootStateAfter);
 
         } finally {
             sm.stop();

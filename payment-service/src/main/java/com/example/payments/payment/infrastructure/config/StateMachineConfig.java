@@ -213,8 +213,10 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
             Long paymentId = context.getExtendedState().get("paymentId", Long.class);
             BigDecimal amount   = context.getExtendedState().get("paymentAmount",   BigDecimal.class);
             String currency     = context.getExtendedState().get("paymentCurrency", String.class);
-            BigDecimal fee      = context.getExtendedState().get("processingFee",   BigDecimal.class);
-            BigDecimal net      = context.getExtendedState().get("netAmount",        BigDecimal.class);
+            
+            FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, currency));
+            BigDecimal fee = breakdown.totalFee().getAmount();
+            BigDecimal net = breakdown.netAmount().getAmount();
 
             // ── I/O operation 1: persist fee record to the database ────────
             feeCalculationService.saveSettlement(paymentId, Money.of(amount, currency));
@@ -271,8 +273,11 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
             }
 
             Long paymentId   = context.getExtendedState().get("paymentId",   Long.class);
-            BigDecimal net   = context.getExtendedState().get("netAmount",    BigDecimal.class);
+            BigDecimal amount   = context.getExtendedState().get("paymentAmount",   BigDecimal.class);
             String currency  = context.getExtendedState().get("paymentCurrency", String.class);
+            
+            FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, currency));
+            BigDecimal net = breakdown.netAmount().getAmount();
 
             log.info("========================================================");
             log.info("[Entry:Completed] Payment {} has been captured!", paymentId);

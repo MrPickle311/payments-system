@@ -1,15 +1,27 @@
 spring:
   application:
     name: payment-service
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/payment_db
-    username: admin
-    password: password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
       connection-timeout: 30000
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
   jpa:
     hibernate:
@@ -20,11 +32,22 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus # Otwiera endpoint /actuator/prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name} # Ułatwi filtrowanie w Grafanie
+  tracing:
+    sampling:
+      probability: 1.0 # 100% zapytań jest śledzonych (na produkcję daje się np. 0.1)
+  otlp:
+    tracing:
+      # Celuje w Tempo w namespace 'monitoring'
+      endpoint: http://tempo.monitoring.svc.cluster.local:4318/v1/traces
+
 
 server:
   port: 8080

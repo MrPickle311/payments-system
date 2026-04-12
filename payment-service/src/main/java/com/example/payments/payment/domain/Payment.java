@@ -40,12 +40,13 @@ public class Payment {
 
     /** Convenience accessor that parses the stored string back to the enum. */
     public PaymentState currentState() {
-        return PaymentState.valueOf(this.state);
+        if (this.state == null) return null;
+        String rootStateName = this.state.split(",")[0];
+        return PaymentState.valueOf(rootStateName);
     }
     
     public void publishStateChange(PaymentState oldState, PaymentState newState) {
         if (oldState != newState) {
-            this.state = newState.name();
             registerEvent(new com.example.payments.payment.domain.event.PaymentStateChangedEvent(id, oldState.name(), newState.name()));
         }
     }

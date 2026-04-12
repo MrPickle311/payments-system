@@ -22,9 +22,11 @@ public class PaymentStateMachinePersister
     @Override
     public void persist(StateMachine<PaymentState, PaymentEvent> stateMachine,
                         Payment payment) {
-        PaymentState newState = stateMachine.getState().getId();
-        log.debug("[Persister] Persisting state {} for payment {}", newState, payment.getId());
-        payment.setState(newState.name());
+        String stateStr = stateMachine.getState().getIds().stream()
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.joining(","));
+        log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
+        payment.setState(stateStr);
     }
 
     @Override
@@ -32,9 +34,10 @@ public class PaymentStateMachinePersister
             StateMachine<PaymentState, PaymentEvent> stateMachine,
             Payment payment) {
 
-        PaymentState storedState = payment.currentState();
+        String[] stateNames = payment.getState().split(",");
+        PaymentState storedState = PaymentState.valueOf(stateNames[0]);
         log.debug("[Persister] Restoring state machine to state {} for payment {}",
-                storedState, payment.getId());
+                payment.getState(), payment.getId());
 
         DefaultExtendedState extendedState = new DefaultExtendedState();
         extendedState.getVariables().put("paymentId",       payment.getId());
@@ -43,8 +46,16 @@ public class PaymentStateMachinePersister
         extendedState.getVariables().put("paymentCreatedAt", payment.getCreatedAt());
         extendedState.getVariables().put("isRestoring",     Boolean.TRUE);
 
-        DefaultStateMachineContext<PaymentState, PaymentEvent> context =
-                new DefaultStateMachineContext<>(storedState, null, null, extendedState);
+        org.springframework.statemachine.StateMachineContext<PaymentState, PaymentEvent> context;
+        if (stateNames.length > 1) {
+            java.util.List<org.springframework.statemachine.StateMachineContext<PaymentState, PaymentEvent>> childs = new java.util.ArrayList<>();
+            for (int i = 1; i < stateNames.length; i++) {
+                childs.add(new DefaultStateMachineContext<>(PaymentState.valueOf(stateNames[i]), null, null, null));
+            }
+            context = new DefaultStateMachineContext<>(childs, storedState, null, null, extendedState);
+        } else {
+            context = new DefaultStateMachineContext<>(storedState, null, null, extendedState);
+        }
 
         stateMachine.stop();
 

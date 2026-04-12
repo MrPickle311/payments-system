@@ -12,6 +12,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.statemachine.StateMachine;
+import org.springframework.statemachine.config.StateMachineFactory;
+import com.example.payments.payment.application.PaymentService;
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentRepository;
+import com.example.payments.payment.domain.PaymentHistoryRepository;
+import com.example.payments.payment.domain.InvalidTransitionException;
+import com.example.payments.payment.infrastructure.config.PaymentStateMachineInterceptor;
+import com.example.payments.payment.infrastructure.config.PaymentStateMachinePersister;
+import java.util.Optional;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.springframework.statemachine.config.StateMachineBuilder;
 import org.springframework.statemachine.support.DefaultStateMachineContext;
 
@@ -46,8 +57,13 @@ class GeneratedStateMachineConfigTest {
     private FeeCalculationService feeCalculationService;
     private WalletClient walletClient;
     private LedgerPublisher ledgerPublisher;
-    private StateMachine<PaymentState, PaymentEvent> stateMachine;
+    private PaymentService paymentService;
+    private Payment testPayment;
+    private PaymentRepository paymentRepository;
+    private PaymentHistoryRepository paymentHistoryRepository;
+    private StateMachine<PaymentState, PaymentEvent> lastStateMachine;
 
+    
     @BeforeEach
     void setUp() throws Exception {
         fraudCheckService = mock(FraudCheckService.class);
@@ -55,11 +71,9 @@ class GeneratedStateMachineConfigTest {
         walletClient = mock(WalletClient.class);
         ledgerPublisher = mock(LedgerPublisher.class);
 
-        // Default: fraud check passes, low risk
         when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                 .thenReturn(new FraudCheckService.FraudResult(10, "LOW", "ALLOW"));
 
-        // Default: fee calculation returns a breakdown
         when(feeCalculationService.calculate(any(Money.class)))
                 .thenReturn(new FeeBreakdown(
                         Money.of("100.00", "USD"),
@@ -69,7 +83,30 @@ class GeneratedStateMachineConfigTest {
                         Money.of("96.8000", "USD")
                 ));
 
-        stateMachine = buildStateMachine();
+        paymentRepository = mock(PaymentRepository.class);
+        paymentHistoryRepository = mock(PaymentHistoryRepository.class);
+
+        testPayment = Payment.builder()
+                .id(1L)
+                .transactionId("txn_123")
+                .money(Money.of("100.00", "USD"))
+                .state(PaymentState.NEW.name())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(testPayment));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+
+        StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory = mock(StateMachineFactory.class);
+        when(stateMachineFactory.getStateMachine(anyString())).thenAnswer(i -> {
+            lastStateMachine = buildStateMachine();
+            return lastStateMachine;
+        });
+
+        PaymentStateMachineInterceptor interceptor = new PaymentStateMachineInterceptor(paymentHistoryRepository);
+        PaymentStateMachinePersister persister = new PaymentStateMachinePersister();
+
+        paymentService = new PaymentService(paymentRepository, paymentHistoryRepository, stateMachineFactory, interceptor, persister);
     }
 
     /**
@@ -95,13 +132,6 @@ class GeneratedStateMachineConfigTest {
         return sm;
     }
 
-    /** Seeds standard payment context into ExtendedState. */
-    private void seedExtendedState(Long paymentId, BigDecimal amount, String currency) {
-        stateMachine.getExtendedState().getVariables().put("paymentId", paymentId);
-        stateMachine.getExtendedState().getVariables().put("paymentAmount", amount);
-        stateMachine.getExtendedState().getVariables().put("paymentCurrency", currency);
-    }
-
     // =========================================================================
     // State Transition Tests
     // =========================================================================
@@ -113,17 +143,17 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("Initial state is NEW")
         void initialStateIsNew() {
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.NEW);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.NEW);
         }
 
         @Test
         @DisplayName("NEW → PROCESSING on INITIATE")
         void newToProcessingOnInitiate() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
 
             // PROCESSING is a composite — the machine should be in PROCESSING
             // and simultaneously in both region initial states
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.PROCESSING,
                               PaymentState.AUTH_PENDING,
                               PaymentState.FRAUD_EVALUATING);
@@ -132,52 +162,47 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("PROCESSING → FAILED on FAIL")
         void processingToFailedOnFail() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.FAIL);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.FAIL);
 
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.FAILED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
         }
 
         @Test
         @DisplayName("PROCESSING → CANCELED on CANCEL")
         void processingToCanceledOnCancel() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.CANCEL);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.CANCEL);
 
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.CANCELED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.CANCELED);
         }
 
         @Test
         @DisplayName("Invalid: NEW cannot receive AUTHORIZE")
         void newCannotReceiveAuthorize() {
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-
-            // Should remain in NEW — event was rejected
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.NEW);
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.AUTHORIZE));
         }
 
         @Test
         @DisplayName("Invalid: NEW cannot receive COMPLETE")
         void newCannotReceiveComplete() {
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
-
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.NEW);
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.COMPLETE));
         }
 
         @Test
         @DisplayName("Terminal state FAILED rejects all events")
         void failedRejectsAllEvents() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.FAIL);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.FAIL);
 
             // Try every event — should stay FAILED
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
-            stateMachine.sendEvent(PaymentEvent.CANCEL);
-            stateMachine.sendEvent(PaymentEvent.REFUND);
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.INITIATE));
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.AUTHORIZE));
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.COMPLETE));
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.CANCEL));
+            assertThrows(InvalidTransitionException.class, () -> paymentService.processEvent(1L, PaymentEvent.REFUND));
 
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.FAILED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
         }
     }
 
@@ -192,50 +217,50 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("Authorization region transitions independently of FraudCheck")
         void authorizationRegionTransitionsIndependently() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
+            testPayment.setMoney(Money.of("100.00", "USD"));
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
 
             // Authorize in the auth region (fraud check passes → AUTH_APPROVED)
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
             // Auth region moved to AUTH_APPROVED, fraud region stays at FRAUD_EVALUATING
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_APPROVED, PaymentState.FRAUD_EVALUATING);
         }
 
         @Test
         @DisplayName("FraudCheck region transitions independently of Authorization")
         void fraudCheckRegionTransitionsIndependently() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
 
             // Clear fraud in the fraud region
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
 
             // Fraud region moved to FRAUD_PASSED, auth region stays at AUTH_PENDING
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_PENDING, PaymentState.FRAUD_PASSED);
         }
 
         @Test
         @DisplayName("Both regions can reach their success states simultaneously")
         void bothRegionsReachSuccessStates() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
+            testPayment.setMoney(Money.of("100.00", "USD"));
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
 
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);     // Auth → AUTH_APPROVED
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);   // Fraud → FRAUD_PASSED
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);     // Auth → AUTH_APPROVED
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);   // Fraud → FRAUD_PASSED
 
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_APPROVED, PaymentState.FRAUD_PASSED);
         }
 
         @Test
         @DisplayName("FRAUD_ALERT transitions FraudCheck region to FRAUD_DETECTED")
         void fraudAlertTransitionsToDetected() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_ALERT);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_ALERT);
 
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_PENDING, PaymentState.FRAUD_DETECTED);
         }
     }
@@ -251,95 +276,93 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("fraudCheckGuard allows transition when risk is LOW")
         void fraudCheckGuardAllowsLowRisk() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
             when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                     .thenReturn(new FraudCheckService.FraudResult(10, "LOW", "ALLOW"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_APPROVED);
         }
 
         @Test
         @DisplayName("fraudCheckGuard blocks transition when risk is HIGH → AUTH_REJECTED")
         void fraudCheckGuardBlocksHighRisk() {
-            seedExtendedState(1L, new BigDecimal("10000.00"), "USD");
+            testPayment.setMoney(Money.of("10000.00", "USD"));
 
             when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                     .thenReturn(new FraudCheckService.FraudResult(92, "HIGH", "BLOCK"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
             // Negated guard fires → AUTH_REJECTED
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_REJECTED);
         }
 
         @Test
         @DisplayName("fraudCheckGuard stores score in extended state")
         void fraudCheckGuardStoresScoreInExtendedState() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
             when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                     .thenReturn(new FraudCheckService.FraudResult(25, "LOW", "ALLOW"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
-            assertThat(stateMachine.getExtendedState().get("fraudScore", Integer.class))
+            assertThat(lastStateMachine.getExtendedState().get("fraudScore", Integer.class))
                     .isEqualTo(25);
-            assertThat(stateMachine.getExtendedState().get("fraudRisk", String.class))
+            assertThat(lastStateMachine.getExtendedState().get("fraudRisk", String.class))
                     .isEqualTo("LOW");
         }
 
         @Test
         @DisplayName("refundWindowGuard blocks refund outside 30-day window")
-        void refundWindowGuardBlocks() throws Exception {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+        void refundWindowGuardBlocks() {
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
             // Walk the machine to COMPLETED
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
 
             when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
                     .thenReturn(null);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
+            paymentService.processEvent(1L, PaymentEvent.COMPLETE);
 
             // Set createdAt to 60 days ago — outside window
-            stateMachine.getExtendedState().getVariables()
-                    .put("paymentCreatedAt", LocalDateTime.now().minusDays(60));
+            testPayment.setCreatedAt(LocalDateTime.now().minusDays(60));
 
-            stateMachine.sendEvent(PaymentEvent.REFUND);
+            paymentService.processEvent(1L, PaymentEvent.REFUND);
 
             // Should stay COMPLETED — refund blocked
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.COMPLETED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.COMPLETED);
         }
 
         @Test
         @DisplayName("refundWindowGuard allows refund within 30-day window")
         void refundWindowGuardAllows() throws Exception {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
 
             when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
                     .thenReturn(null);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
+            paymentService.processEvent(1L, PaymentEvent.COMPLETE);
 
             // Set createdAt to 5 days ago — within window
-            stateMachine.getExtendedState().getVariables()
-                    .put("paymentCreatedAt", LocalDateTime.now().minusDays(5));
+            testPayment.setCreatedAt(LocalDateTime.now().minusDays(5));
 
-            stateMachine.sendEvent(PaymentEvent.REFUND);
+            paymentService.processEvent(1L, PaymentEvent.REFUND);
 
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.REFUNDED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.REFUNDED);
         }
     }
 
@@ -354,10 +377,10 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("feeCalculationAction is invoked on AUTHORIZE transition")
         void feeCalculationActionInvokedOnAuthorize() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
             verify(feeCalculationService).calculate(Money.of("100.00", "USD"));
         }
@@ -365,27 +388,27 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("feeCalculationAction stores fee in extended state")
         void feeCalculationActionStoresFeeInExtendedState() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
-            assertThat(stateMachine.getExtendedState().get("processingFee", BigDecimal.class))
+            assertThat(lastStateMachine.getExtendedState().get("processingFee", BigDecimal.class))
                     .isEqualByComparingTo("3.20");
-            assertThat(stateMachine.getExtendedState().get("netAmount", BigDecimal.class))
+            assertThat(lastStateMachine.getExtendedState().get("netAmount", BigDecimal.class))
                     .isEqualByComparingTo("96.80");
         }
 
         @Test
         @DisplayName("feeCalculationAction is NOT invoked when fraud guard blocks")
         void feeCalculationActionNotInvokedWhenGuardBlocks() {
-            seedExtendedState(1L, new BigDecimal("10000.00"), "USD");
+            testPayment.setMoney(Money.of("10000.00", "USD"));
 
             when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                     .thenReturn(new FraudCheckService.FraudResult(92, "HIGH", "BLOCK"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
             // Fee calculation should NOT be called — guard blocked the transition
             verify(feeCalculationService, never()).calculate(any());
@@ -394,15 +417,15 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("settlementAction is invoked on COMPLETE transition")
         void settlementActionInvokedOnComplete() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
             when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
                     .thenReturn(null);
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.COMPLETE);
 
             verify(feeCalculationService).saveSettlement(1L, Money.of("100.00", "USD"));
             verify(walletClient).debit(eq(1L), any(), eq("USD"));
@@ -412,36 +435,33 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("completedEntryAction fires when entering COMPLETED")
         void completedEntryActionFires() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
+            testPayment.setMoney(Money.of("100.00", "USD"));
 
             when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
                     .thenReturn(null);
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.COMPLETE);
 
             // Verify we reached COMPLETED — entry action ran (logging only, no mock to verify)
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.COMPLETED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.COMPLETED);
         }
 
         @Test
         @DisplayName("completedEntryAction is skipped when isRestoring=true")
         void completedEntryActionSkippedWhenRestoring() {
-            seedExtendedState(1L, new BigDecimal("100.00"), "USD");
-            stateMachine.getExtendedState().getVariables().put("isRestoring", Boolean.TRUE);
+            testPayment.setMoney(Money.of("100.00", "USD"));
+            testPayment.setState(PaymentState.COMPLETED.name());
 
-            when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
-                    .thenReturn(null);
+            // A mock process just to trigger restoration of COMPLETED state
+            assertThrows(InvalidTransitionException.class, () -> 
+                paymentService.processEvent(1L, PaymentEvent.AUTHORIZE)
+            );
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
-
-            // Entry action should have been skipped (early return), but state still reached
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.COMPLETED);
+            // Entry action should have been skipped (early return), and state is COMPLETED
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.COMPLETED);
         }
     }
 
@@ -456,56 +476,55 @@ class GeneratedStateMachineConfigTest {
         @Test
         @DisplayName("Happy path: NEW → PROCESSING → COMPLETED → REFUNDED")
         void happyPathToCompletedThenRefund() {
-            seedExtendedState(1L, new BigDecimal("250.00"), "EUR");
+            testPayment.setMoney(Money.of("250.00", "EUR"));
 
             when(feeCalculationService.saveSettlement(anyLong(), any(Money.class)))
                     .thenReturn(null);
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            assertThat(stateMachine.getState().getIds()).contains(PaymentState.PROCESSING);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            assertThat(java.util.List.of(testPayment.currentState())).contains(PaymentState.PROCESSING);
 
             // Both regions proceed
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
-            stateMachine.sendEvent(PaymentEvent.FRAUD_CLEAR);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.FRAUD_CLEAR);
 
             // Complete
-            stateMachine.sendEvent(PaymentEvent.COMPLETE);
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.COMPLETED);
+            paymentService.processEvent(1L, PaymentEvent.COMPLETE);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.COMPLETED);
 
             // Refund within window
-            stateMachine.getExtendedState().getVariables()
-                    .put("paymentCreatedAt", LocalDateTime.now().minusDays(2));
-            stateMachine.sendEvent(PaymentEvent.REFUND);
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.REFUNDED);
+            testPayment.setCreatedAt(LocalDateTime.now().minusDays(2));
+            paymentService.processEvent(1L, PaymentEvent.REFUND);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.REFUNDED);
         }
 
         @Test
         @DisplayName("Fraud rejection path: NEW → PROCESSING → AUTH_REJECTED")
         void fraudRejectionPath() {
-            seedExtendedState(1L, new BigDecimal("10000.00"), "USD");
+            testPayment.setMoney(Money.of("10000.00", "USD"));
 
             when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
                     .thenReturn(new FraudCheckService.FraudResult(92, "HIGH", "BLOCK"));
 
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.AUTHORIZE);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
 
             // Auth region goes to rejected, but still inside PROCESSING composite
-            assertThat(stateMachine.getState().getIds())
+            assertThat(lastStateMachine.getState().getIds())
                     .contains(PaymentState.AUTH_REJECTED, PaymentState.FRAUD_EVALUATING);
 
             // Can still fail the whole payment
-            stateMachine.sendEvent(PaymentEvent.FAIL);
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.FAILED);
+            paymentService.processEvent(1L, PaymentEvent.FAIL);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
         }
 
         @Test
         @DisplayName("Cancellation path: NEW → PROCESSING → CANCELED")
         void cancellationPath() {
-            stateMachine.sendEvent(PaymentEvent.INITIATE);
-            stateMachine.sendEvent(PaymentEvent.CANCEL);
+            paymentService.processEvent(1L, PaymentEvent.INITIATE);
+            paymentService.processEvent(1L, PaymentEvent.CANCEL);
 
-            assertThat(stateMachine.getState().getId()).isEqualTo(PaymentState.CANCELED);
+            assertThat(testPayment.currentState()).isEqualTo(PaymentState.CANCELED);
         }
     }
 }
