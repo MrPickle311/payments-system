@@ -1,20 +1,48 @@
 server:
   port: 8082
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus # Otwiera endpoint /actuator/prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name} # Ułatwi filtrowanie w Grafanie
+  tracing:
+    sampling:
+      probability: 1.0 # 100% zapytań jest śledzonych (na produkcję daje się np. 0.1)
+  otlp:
+    tracing:
+      # Celuje w Tempo w namespace 'monitoring'
+      endpoint: http://tempo.monitoring.svc.cluster.local:4318/v1/traces
+
 spring:
   application:
     name: ledger-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/ledger_db
-    username: admin
-    password: password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
     consumer:
       group-id: ledger-service-group
       auto-offset-reset: earliest
@@ -23,4 +51,4 @@ spring:
 
 logging:
   level:
-    com.example.payments.ledger: DEBUG
+    com.example.payments: DEBUG
