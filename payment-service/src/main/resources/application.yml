@@ -1,6 +1,12 @@
+
+jdbc:
+  datasource-proxy:
+    enabled: true
+
 spring:
   application:
     name: payment-service
+
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
