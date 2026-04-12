@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: wallet-service
-        image: wallet-service:latest
+        image: registry.homelab/wallet-service:latest
         ports:
         - containerPort: 8081
         env:
