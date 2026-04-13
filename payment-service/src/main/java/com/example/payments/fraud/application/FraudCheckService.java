@@ -3,6 +3,8 @@ package com.example.payments.fraud.application;
 import com.example.payments.fraud.domain.FraudRecord;
 import com.example.payments.fraud.domain.FraudRecordRepository;
 import com.example.payments.common.domain.Money;
+import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,7 +57,8 @@ public class FraudCheckService {
      * @return the fraud assessment
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public FraudResult evaluate(Long paymentId, Money money) {
+    @Observed(name = "evaluate-fraud")
+    public FraudResult evaluate(@SpanTag("payment.id") Long paymentId, Money money) {
         log.info("[FraudAPI] → Sending check request | payment={} amount={} {}",
                 paymentId, money.getAmount(), money.getCurrency());
 

@@ -3,6 +3,7 @@ package com.example.payments.ledger.application;
 import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.ledger.domain.LedgerEntry;
 import com.example.payments.ledger.infrastructure.persistence.LedgerEntryRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class LedgerService {
     private final LedgerEntryRepository ledgerEntryRepository;
 
     @Transactional
+    @Observed(name = "record-ledger-entry")
     public void record(LedgerEvent event) {
         log.info("[LedgerService] Recording ledger entry for paymentId={}", event.getPaymentId());
 

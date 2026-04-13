@@ -4,6 +4,8 @@ import com.example.payments.fee.domain.FeeBreakdown;
 import com.example.payments.fee.domain.PaymentFee;
 import com.example.payments.fee.domain.PaymentFeeRepository;
 import com.example.payments.common.domain.Money;
+import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class FeeCalculationService {
 
     private final PaymentFeeRepository paymentFeeRepository;
 
+    @Observed(name = "calculate-fee")
     public FeeBreakdown calculate(Money grossAmount) {
         Money percentageFee = grossAmount.multiply(PERCENTAGE_RATE, SCALE, RoundingMode.HALF_UP);
         Money totalFee = percentageFee.add(Money.of(FLAT_FEE, grossAmount.getCurrency()));
@@ -39,7 +42,8 @@ public class FeeCalculationService {
     /**
      * Persists the fee record to the database.
      */
-    public PaymentFee saveSettlement(Long paymentId, Money grossAmount) {
+    @Observed(name = "save-settlement")
+    public PaymentFee saveSettlement(@SpanTag("payment.id") Long paymentId, Money grossAmount) {
         FeeBreakdown b = calculate(grossAmount);
 
         log.info("[FeeCalc] Settlement for payment {} | gross={} fee={} ({} % + {} flat) net={} {}",
@@ -64,7 +68,8 @@ public class FeeCalculationService {
         return paymentFeeRepository.save(fee);
     }
 
-    public PaymentFee getFee(Long paymentId) {
+    @Observed(name = "get-fee")
+    public PaymentFee getFee(@SpanTag("payment.id") Long paymentId) {
         return paymentFeeRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new RuntimeException(
                         "No fee record found for payment " + paymentId

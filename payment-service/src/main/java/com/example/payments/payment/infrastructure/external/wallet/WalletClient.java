@@ -21,7 +21,7 @@ public class WalletClient {
     @Value("${wallet.service.url}")
     private String walletServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate(); // For simplicity, using RestTemplate
+    private final RestTemplate restTemplate;
 
     public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
         log.info("[PaymentService -> WalletClient] Calling Wallet Service for paymentId={} amount={} {}", 

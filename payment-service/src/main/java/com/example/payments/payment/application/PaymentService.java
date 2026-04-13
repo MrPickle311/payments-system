@@ -6,6 +6,8 @@ import com.example.payments.common.domain.enums.PaymentEvent;
 import com.example.payments.common.domain.enums.PaymentState;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachineInterceptor;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachinePersister;
+import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.support.MessageBuilder;
@@ -35,6 +37,7 @@ public class PaymentService {
     private final PaymentStateMachinePersister stateMachinePersister;
 
     @Transactional
+    @Observed(name = "create-payment")
     public Payment createPayment(CreatePaymentRequest request) {
         Payment payment = Payment.builder()
                 .transactionId(request.getTransactionId())
@@ -58,7 +61,8 @@ public class PaymentService {
     }
 
     @Transactional(noRollbackFor = InvalidTransitionException.class)
-    public Payment processEvent(Long paymentId, PaymentEvent event) {
+    @Observed(name = "process-payment-event")
+    public Payment processEvent(@SpanTag("payment.id") Long paymentId, PaymentEvent event) {
         Payment payment = paymentRepository.findByIdWithLock(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(paymentId));
 
@@ -136,13 +140,15 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public Payment getPayment(Long paymentId) {
+    @Observed(name = "get-payment")
+    public Payment getPayment(@SpanTag("payment.id") Long paymentId) {
         return paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException(paymentId));
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentHistory> getPaymentHistory(Long paymentId) {
+    @Observed(name = "get-payment-history")
+    public List<PaymentHistory> getPaymentHistory(@SpanTag("payment.id") Long paymentId) {
         if (!paymentRepository.existsById(paymentId)) {
             throw new PaymentNotFoundException(paymentId);
         }

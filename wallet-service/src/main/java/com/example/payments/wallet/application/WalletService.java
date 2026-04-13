@@ -4,6 +4,7 @@ import com.example.payments.common.dto.DebitRequest;
 import com.example.payments.common.dto.DebitResponse;
 import com.example.payments.wallet.domain.WalletAccount;
 import com.example.payments.wallet.infrastructure.persistence.WalletAccountRepository;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class WalletService {
     private final WalletAccountRepository walletAccountRepository;
 
     @Transactional
+    @Observed(name = "debit-wallet")
     public DebitResponse debit(DebitRequest request) {
         log.info("[WalletService] Processing debit for paymentId={} amount={} {}",
                 request.getPaymentId(), request.getAmount(), request.getCurrency());
