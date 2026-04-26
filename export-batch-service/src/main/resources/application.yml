@@ -1,0 +1,59 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: export-batch-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_batch_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+      pool-name: BatchHikariCP
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: export-batch-group
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  batch:
+    job:
+      enabled: false # We trigger the job manually via scheduler
+    jdbc:
+      initialize-schema: always
+
+export:
+  batch-size: 3
+  topic: payment-ledger-events
+  schedule: "0/30 * * * * *" # Every 30 seconds
+  batch:
+    requests-topic: export-batch-requests
+    replies-topic: export-batch-replies
+  datasource-proxy:
+    enabled: true
+
+logging:
+  level:
+    com.example.payments: DEBUG
+    org.springframework.batch: INFO
