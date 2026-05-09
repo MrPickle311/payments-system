@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="refresh" content="30"/>
+    <title>Batch Monitor — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <th:block th:replace="~{batch/layout :: styles}"/>
+    <style th:inline="none">
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #22263a;
+            --border: #2e3350;
+            --accent: #6366f1;
+            --accent-glow: rgba(99,102,241,0.25);
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --blue: #3b82f6;
+            --gray: #6b7280;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-brand::before { content: '⬡'; font-size: 1.3rem; }
+        nav a { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; font-weight: 500; }
+        nav a:hover { color: var(--text); }
+        .nav-right { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .page-header { margin-bottom: 2rem; }
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .page-header p { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-value { font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
+        .stat-value.accent { color: var(--accent); }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.5rem; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-weight: 600; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            padding: 0.625rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(99,102,241,0.05); }
+        td { padding: 0.875rem 1rem; font-size: 0.875rem; vertical-align: middle; }
+        td a { color: var(--accent); text-decoration: none; font-weight: 500; }
+        td a:hover { text-decoration: underline; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .badge-COMPLETED  { background: rgba(34,197,94,0.15);  color: #22c55e; }
+        .badge-FAILED     { background: rgba(239,68,68,0.15);   color: #ef4444; }
+        .badge-STARTED    { background: rgba(99,102,241,0.15);  color: #6366f1; animation: pulse 2s infinite; }
+        .badge-STOPPED    { background: rgba(245,158,11,0.15);  color: #f59e0b; }
+        .badge-UNKNOWN    { background: rgba(107,114,128,0.15); color: #6b7280; }
+        .badge-NEVER_RUN  { background: rgba(107,114,128,0.15); color: #6b7280; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .job-name { font-family: monospace; font-weight: 600; font-size: 0.875rem; color: var(--text); }
+        .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .refresh-hint { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+    </style>
+</head>
+<body>
+<nav>
+    <a class="nav-brand" href="/batch">BatchMonitor</a>
+    <a href="/batch">Dashboard</a>
+    <span class="nav-right" id="clock"></span>
+</nav>
+<div class="container">
+    <div class="page-header">
+        <h1>Batch Dashboard</h1>
+        <p>Overview of all Spring Batch jobs registered in this service. Auto-refreshes every 30s.</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Registered Jobs</div>
+            <div class="stat-value accent" th:text="${jobs.size()}">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Instances</div>
+            <div class="stat-value" th:text="${totalInstances}">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Executions</div>
+            <div class="stat-value" th:text="${totalExecutions}">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Running Now</div>
+            <div class="stat-value"
+                 th:text="${jobs.?[lastStatus == 'STARTED'].size()}"
+                 style="color: #6366f1">0</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Registered Jobs</span>
+            <span class="refresh-hint">⟳ refreshes every 30s</span>
+        </div>
+        <div th:if="${jobs.isEmpty()}" class="empty-state">
+            <div class="icon">📭</div>
+            <p>No jobs have been executed yet.</p>
+        </div>
+        <table th:if="${!jobs.isEmpty()}">
+            <thead>
+                <tr>
+                    <th>Job Name</th>
+                    <th>Instances</th>
+                    <th>Executions</th>
+                    <th>Last Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="job : ${jobs}">
+                    <td class="job-name" th:text="${job.jobName}">exportLedgerJob</td>
+                    <td th:text="${job.instanceCount}">0</td>
+                    <td th:text="${job.totalExecutions}">0</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="'badge-' + ${job.lastStatus}"
+                              th:text="${job.lastStatus}">UNKNOWN</span>
+                    </td>
+                    <td>
+                        <a th:href="@{/batch/jobs/{name}(name=${job.jobName})}">View Executions →</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    function tick() { document.getElementById('clock').textContent = new Date().toLocaleString(); }
+    tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>

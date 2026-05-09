@@ -27,9 +27,6 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: export-batch-group
       auto-offset-reset: latest
@@ -47,9 +44,6 @@ export:
   batch-size: 3
   topic: payment-ledger-events
   schedule: "0/30 * * * * *" # Every 30 seconds
-  batch:
-    requests-topic: export-batch-requests
-    replies-topic: export-batch-replies
   datasource-proxy:
     enabled: true
 
