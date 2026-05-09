@@ -1,0 +1,13 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: mock-regulatory-service
+
+regulatory:
+  failure-rate: 0.2 # 20% of requests will randomly fail with 500 ERROR
+
+logging:
+  level:
+    com.example.payments: DEBUG
