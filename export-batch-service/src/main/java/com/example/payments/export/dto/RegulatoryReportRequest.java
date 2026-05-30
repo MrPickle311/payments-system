@@ -14,18 +14,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegulatoryReportRequest {
-    private String reportId;
-    private List<ExportedPayment> payments;
+  private String reportId;
+  private List<ExportedPayment> payments;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ExportedPayment {
-        private Long paymentId;
-        private BigDecimal grossAmount;
-        private BigDecimal netAmount;
-        private String currency;
-        private LocalDateTime timestamp;
-    }
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class ExportedPayment {
+    private Long paymentId;
+    private BigDecimal grossAmount;
+    private BigDecimal netAmount;
+    private String currency;
+    private LocalDateTime timestamp;
+  }
 }
