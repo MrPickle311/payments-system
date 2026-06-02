@@ -17,7 +17,8 @@ import java.util.Properties;
 @Slf4j
 public class KafkaReaderConfig {
 
-  private final ConsumerFactory<String, String> consumerFactory;
+  @SuppressWarnings("rawtypes")
+  private final ConsumerFactory consumerFactory;
   private final ExportProperties exportProperties;
 
   @Bean
@@ -27,18 +28,19 @@ public class KafkaReaderConfig {
     log.info("Creating KafkaItemReader for partitionId: {}", partitionId);
     Properties props = new Properties();
     props.putAll(consumerFactory.getConfigurationProperties());
-
-    // Each partition gets its own isolated consumer group.
     props.put("group.id", "export-batch-group-part-" + partitionId);
-
-    // Fix for CommitFailedException during slow batch processing
-    props.put("max.poll.interval.ms", "600000"); // 10 minutes
+    props.put("max.poll.interval.ms", "600000");
     props.put("session.timeout.ms", "60000");
     props.put("heartbeat.interval.ms", "15000");
     props.put("max.poll.records", "3");
-
     return new KafkaItemReaderBuilder<String, String>().partitions(partitionId)
         .consumerProperties(props).name("payments-kafka-reader-" + partitionId).saveState(true)
         .topic(exportProperties.getTopic()).pollTimeout(java.time.Duration.ofSeconds(1)).build();
+  }
+
+  @Bean
+  public org.apache.kafka.clients.admin.NewTopic paymentLedgerEventsTopic() {
+    return org.springframework.kafka.config.TopicBuilder.name(exportProperties.getTopic())
+        .partitions(exportProperties.getGridSize()).build();
   }
 }

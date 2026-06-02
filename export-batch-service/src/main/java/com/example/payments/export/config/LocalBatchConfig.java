@@ -36,6 +36,8 @@ public class LocalBatchConfig {
   private final ObjectMapper objectMapper;
   private final ExportProperties exportProperties;
 
+  private static final String WORKER_STEP = "workerStep";
+
   @Bean
   public Job exportLedgerJob(Step managerStep) {
     return new JobBuilder("exportLedgerJob", jobRepository).incrementer(new RunIdIncrementer())
@@ -44,7 +46,7 @@ public class LocalBatchConfig {
 
   @Bean
   public Step managerStep(TaskExecutorPartitionHandler partitionHandler, Partitioner partitioner) {
-    return new StepBuilder("managerStep", jobRepository).partitioner("workerStep", partitioner)
+    return new StepBuilder("managerStep", jobRepository).partitioner(WORKER_STEP, partitioner)
         .partitionHandler(partitionHandler).gridSize(exportProperties.getGridSize()).build();
   }
 
@@ -74,7 +76,7 @@ public class LocalBatchConfig {
 
   @Bean
   public Step workerStep() {
-    return new StepBuilder("workerStep", jobRepository)
+    return new StepBuilder(WORKER_STEP, jobRepository)
         .<String, LedgerEvent>chunk(exportProperties.getBatchSize(), transactionManager)
         .reader(kafkaItemReader).processor(eventProcessor()).writer(regulatoryApiWriter)
         .faultTolerant().retryLimit(3).retry(ResourceAccessException.class)

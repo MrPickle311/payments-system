@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Component
@@ -24,51 +25,41 @@ public class RegulatoryApiWriter implements ItemWriter<LedgerEvent> {
 
   @Override
   public void write(Chunk<? extends LedgerEvent> chunk) {
-    log.info("[RegulatoryApiWriter] Preparing to export chunk of {} payments", chunk.size());
-
-    List<RegulatoryReportRequest.ExportedPayment> exportedPayments = chunk.getItems().stream()
-        .map(event -> RegulatoryReportRequest.ExportedPayment.builder()
-            .paymentId(event.getPaymentId()).grossAmount(event.getGrossAmount())
-            .netAmount(event.getNetAmount()).currency(event.getCurrency())
-            .timestamp(event.getTimestamp()).build())
-        .toList();
-
-    String reportId = generateReportId(chunk.getItems());
-
-    RegulatoryReportRequest request =
-        RegulatoryReportRequest.builder().reportId(reportId).payments(exportedPayments).build();
-
+    RegulatoryReportRequest request = buildRequest(chunk);
     String url = exportProperties.getRegulatory().getUrl();
-    log.info("[RegulatoryApiWriter] Sending report id={} to {}", request.getReportId(), url);
-    log.info("Number of chunks sent is {} for report id {}", chunk.size(), request.getReportId());
-
-    // This call will be retried by Spring Batch if it throws an exception (and
-    // configured so)
+    log.info("Sending report {} to {}, chunks {}", request.getReportId(), url, chunk.size());
     restTemplate.postForLocation(url, request);
+    log.info("Report id={} sent successfully", request.getReportId());
+  }
 
-    log.info("[RegulatoryApiWriter] Report id={} sent successfully", request.getReportId());
+  private RegulatoryReportRequest buildRequest(Chunk<? extends LedgerEvent> chunk) {
+    List<RegulatoryReportRequest.ExportedPayment> exportedPayments =
+        chunk.getItems().stream().map(this::toExportedPayment).toList();
+    return RegulatoryReportRequest.builder().reportId(generateReportId(chunk.getItems()))
+        .payments(exportedPayments).build();
+  }
+
+  private RegulatoryReportRequest.ExportedPayment toExportedPayment(LedgerEvent e) {
+    return RegulatoryReportRequest.ExportedPayment.builder().paymentId(e.getPaymentId())
+        .grossAmount(e.getGrossAmount()).netAmount(e.getNetAmount()).currency(e.getCurrency())
+        .timestamp(e.getTimestamp()).build();
   }
 
   private String generateReportId(List<? extends LedgerEvent> items) {
-    // Collect all payment IDs, sort them to ensure same hash, and join
     String ids = items.stream().map(LedgerEvent::getPaymentId).sorted().map(String::valueOf)
         .collect(Collectors.joining(","));
+    return calculateMd5(ids);
+  }
 
+  private String calculateMd5(String input) {
     try {
       MessageDigest digest = MessageDigest.getInstance("MD5");
-      byte[] hash = digest.digest(ids.getBytes());
-      StringBuilder hexString = new StringBuilder();
-      for (byte b : hash) {
-        String hex = Integer.toHexString(0xff & b);
-        if (hex.length() == 1) {
-          hexString.append('0');
-        }
-        hexString.append(hex);
-      }
-      return hexString.toString();
+      byte[] hash = digest.digest(input.getBytes());
+      return IntStream.range(0, hash.length).mapToObj(i -> String.format("%02x", hash[i]))
+          .collect(Collectors.joining());
     } catch (Exception e) {
-      log.warn("[Idempotency] Could not generate MD5 hash, falling back to simple hashcode");
-      return "fallback-" + ids.hashCode();
+      log.warn("MD5 failed, falling back");
+      return "fallback-" + input.hashCode();
     }
   }
 }
