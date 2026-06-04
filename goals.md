@@ -1,0 +1,15 @@
+wizualizacja:
+  - diagram stanów i inne htmle, spiąć to
+  - wizualizacja danego joba w html
+  - wizualizacja za pomocą grafany 
+  - wizualizacja partycjonowania w spring batch
+  - spiąć wszystko w Homepage 
+  - wystaw actuatora z aplikacji
+  - monitorowanie beanów springa 
+  - wystawić openapi jako defaultowa strone dla kazdego serwisu
+  - export metryk z maszyny stanów do grafany
+  - export metryk z jobów i partycjonowania do grafany
+  - powiązanie danych z danym paymentem oraz kafką. Da się wszystkie dane jakoś ładnie wyświetlić  ? - done
+  - na koniec przeygotować testplan, który pokaże mi jak partycjnowania działa pod obciążeniem. Partycjonowanie lokalne i zdalne. Mock regulatory service powinno odpowiadać bardzo wolno tak, by zaszła potrzeba partycjowania i zrównoleglenia pracy
+  - tesplan również powinien pokazywać ladne przejscia miedzy stanami
+  - posprzątać kod

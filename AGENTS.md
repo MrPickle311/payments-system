@@ -22,8 +22,11 @@
     8. Maximum amount of parameters is 4. If more are needed, then pack it into class with builder. Each parameter must be different type. If there are more than 1 parameter with the same type then they should also be packed to class. 
     9. String constants should be moved into constant variables. Group related constants in utility classes.
     10. Each stream method like .map(), .filter() etc... should begin from a new line 
-    11. Exception's catch() block shold always contain warn or error log 
+    11. Exception's catch() block should always contain warn or error log 
     12. Variable names have to be full English words. It cannot be shortcut/shorthand name 
+    13. Versions in pom.xml should reside in variables. 
+    14. Move all possible dependencies and plugin management into base pom.xml 
+    15. Mapping should be done only via mapstruct 
 - Behavior: After finishing the refactoring, always send the code back to the Compiler for a final test.
 - Tools: [file_editor]
 

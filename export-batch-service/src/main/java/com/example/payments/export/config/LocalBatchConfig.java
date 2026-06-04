@@ -2,6 +2,7 @@ package com.example.payments.export.config;
 
 import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.export.job.OffsetRangePartitioner;
+import com.example.payments.export.job.PaymentIdTrackingListener;
 import com.example.payments.export.writer.RegulatoryApiWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -75,12 +76,12 @@ public class LocalBatchConfig {
   }
 
   @Bean
-  public Step workerStep() {
+  public Step workerStep(PaymentIdTrackingListener trackingListener) {
     return new StepBuilder(WORKER_STEP, jobRepository)
         .<String, LedgerEvent>chunk(exportProperties.getBatchSize(), transactionManager)
         .reader(kafkaItemReader).processor(eventProcessor()).writer(regulatoryApiWriter)
-        .faultTolerant().retryLimit(3).retry(ResourceAccessException.class)
-        .retry(HttpServerErrorException.class).build();
+        .listener(trackingListener).faultTolerant().retryLimit(3)
+        .retry(ResourceAccessException.class).retry(HttpServerErrorException.class).build();
   }
 
   @Bean

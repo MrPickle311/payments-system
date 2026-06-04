@@ -1,0 +1,12 @@
+{
+  "skills": {
+    "run_build": {
+      "command": "mvn clean compile",
+      "description": "Source code compilation"
+    },
+    "run_linter": {
+      "command": "mvn checkstyle:check",
+      "description": "Checks coding conventions and style."
+    }
+  }
+}

@@ -13,16 +13,40 @@
         <module>payment-service</module>
         <module>wallet-service</module>
         <module>ledger-service</module>
+        <module>export-batch-service</module>
+        <module>mock-regulatory-service</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <spring-boot.version>3.2.5</spring-boot.version>
+        <spring-boot.version>4.0.0-M2</spring-boot.version>
         <spring-cloud.version>2023.0.1</spring-cloud.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -55,6 +79,21 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

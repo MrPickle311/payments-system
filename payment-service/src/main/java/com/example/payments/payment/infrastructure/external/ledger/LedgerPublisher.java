@@ -27,7 +27,7 @@ public class LedgerPublisher {
                 paymentId, gross, net, currency, LocalDateTime.now());
 
         try {
-            kafkaTemplate.send(topic, event);
+            kafkaTemplate.send(topic, String.valueOf(paymentId), event);
         } catch (Exception e) {
             log.error("[LedgerPublisher] Failed to send Kafka message (no broker available?): {}", e.getMessage());
         }

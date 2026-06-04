@@ -34,7 +34,8 @@ public class KafkaReaderConfig {
     props.put("heartbeat.interval.ms", "15000");
     props.put("max.poll.records", "3");
     return new KafkaItemReaderBuilder<String, String>().partitions(partitionId)
-        .consumerProperties(props).name("payments-kafka-reader-" + partitionId).saveState(true)
+        .partitionOffsets(new java.util.HashMap<>()).consumerProperties(props)
+        .name("payments-kafka-reader-" + partitionId).saveState(true)
         .topic(exportProperties.getTopic()).pollTimeout(java.time.Duration.ofSeconds(1)).build();
   }
 
