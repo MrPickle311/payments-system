@@ -110,8 +110,8 @@ stateDiagram-v2
     state PROCESSING {
         state Authorization {
             [*] --> AUTH_PENDING
-            AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n[fraudCheckGuard]\n/ feeCalculationAction\n(err: feeCalculationErrorAction)
-            AUTH_PENDING --> AUTH_REJECTED : AUTHORIZE\n[fraudCheckGuard → HIGH risk]
+            AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE<br>[fraudCheckGuard]<br>/ feeCalculationAction<br>(err: feeCalculationErrorAction)
+            AUTH_PENDING --> AUTH_REJECTED : AUTHORIZE<br>[fraudCheckGuard → HIGH risk]
         }
         --
         state FraudCheck {
@@ -121,7 +121,7 @@ stateDiagram-v2
         }
     }
     
-    PROCESSING --> COMPLETED : COMPLETE\n/ settlementAction\n(err: settlementErrorAction)
+    PROCESSING --> COMPLETED : COMPLETE<br>/ settlementAction<br>(err: settlementErrorAction)
     note right of PROCESSING
       COMPLETE Guard: 
       AUTH_APPROVED AND FRAUD_PASSED
@@ -132,9 +132,9 @@ stateDiagram-v2
     PROCESSING --> CANCELED : CANCEL
     
     state COMPLETED {
-        COMPLETED_STATE : entry / completedEntryAction\n(skipped when isRestoring=true)
+        COMPLETED_STATE : entry / completedEntryAction<br>(skipped when isRestoring=true)
     }
-    COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]\n(30-day window)
+    COMPLETED --> REFUNDED : REFUND<br>[refundWindowGuard]<br>(30-day window)
     
     %% We append the class assignment dynamically using Thymeleaf
     [# th:each="st : ${payment.state.split(',')}"]
