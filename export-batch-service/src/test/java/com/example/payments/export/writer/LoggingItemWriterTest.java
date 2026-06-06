@@ -7,7 +7,7 @@ import org.springframework.batch.item.Chunk;
 class LoggingItemWriterTest {
 
   @Test
-  void testWrite() throws Exception {
+  void testWrite() {
     LoggingItemWriter writer = new LoggingItemWriter();
     writer.write(new Chunk<>(List.of("item1", "item2")));
   }

@@ -30,6 +30,9 @@ import org.springframework.web.client.ResourceAccessException;
 @RequiredArgsConstructor
 public class LocalBatchConfig {
 
+  public static final String EXPORT_LEDGER_JOB_NAME = "exportLedgerJob";
+  public static final String MANAGER_STEP_NAME = "managerStep";
+
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
   private final KafkaItemReader<String, String> kafkaItemReader;
@@ -37,17 +40,17 @@ public class LocalBatchConfig {
   private final ObjectMapper objectMapper;
   private final ExportProperties exportProperties;
 
-  private static final String WORKER_STEP = "workerStep";
 
   @Bean
   public Job exportLedgerJob(Step managerStep) {
-    return new JobBuilder("exportLedgerJob", jobRepository).incrementer(new RunIdIncrementer())
+    return new JobBuilder(EXPORT_LEDGER_JOB_NAME, jobRepository).incrementer(new RunIdIncrementer())
         .start(managerStep).build();
   }
 
   @Bean
   public Step managerStep(TaskExecutorPartitionHandler partitionHandler, Partitioner partitioner) {
-    return new StepBuilder("managerStep", jobRepository).partitioner(WORKER_STEP, partitioner)
+    return new StepBuilder(MANAGER_STEP_NAME, jobRepository)
+        .partitioner(ExportConstants.WORKER_STEP_NAME, partitioner)
         .partitionHandler(partitionHandler).gridSize(exportProperties.getGridSize()).build();
   }
 
@@ -77,7 +80,7 @@ public class LocalBatchConfig {
 
   @Bean
   public Step workerStep(PaymentIdTrackingListener trackingListener) {
-    return new StepBuilder(WORKER_STEP, jobRepository)
+    return new StepBuilder(ExportConstants.WORKER_STEP_NAME, jobRepository)
         .<String, LedgerEvent>chunk(exportProperties.getBatchSize(), transactionManager)
         .reader(kafkaItemReader).processor(eventProcessor()).writer(regulatoryApiWriter)
         .listener(trackingListener).faultTolerant().retryLimit(3)
@@ -91,7 +94,7 @@ public class LocalBatchConfig {
         LedgerEvent event = objectMapper.readValue(item, LedgerEvent.class);
         log.debug("[WorkerProcessor] Parsed event for paymentId: {}", event.getPaymentId());
         return event;
-      } catch (Exception e) {
+      } catch (Exception exception) {
         log.error("[WorkerProcessor] Failed to parse JSON: {}", item);
         return null;
       }

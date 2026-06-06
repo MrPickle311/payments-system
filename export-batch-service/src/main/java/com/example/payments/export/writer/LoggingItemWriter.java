@@ -12,7 +12,8 @@ public class LoggingItemWriter implements ItemWriter<String> {
   @Override
   public void write(Chunk<? extends String> chunk) {
     log.info("[LoggingItemWriter] Received chunk of size: {}", chunk.size());
-    chunk.forEach(item -> log.debug("[LoggingItemWriter] Item: {}", item));
+    Iterable<? extends String> items = chunk.getItems();
+    items.forEach(item -> log.debug("[LoggingItemWriter] Item: {}", item));
     log.info("[LoggingItemWriter] Chunk processed successfully");
   }
 }

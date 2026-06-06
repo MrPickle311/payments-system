@@ -8,6 +8,9 @@ import static org.springframework.test.web.client.ExpectedCount.min;
 
 import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.export.config.ExportProperties;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.repository.JobRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -46,8 +49,9 @@ import org.springframework.web.client.RestTemplate;
 @SpringBootTest(properties = {"spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
     "export.batch-size=2", "export.grid-size=3",
     "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-    "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa",
-    "spring.datasource.password=", "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+    "spring.datasource.driver-class-name=org.h2." + "Driver", "spring.datasource.username=sa",
+    "spring.datasource.password=",
+    "spring.jpa.database-platform=org.hibernate.dialect." + "H2Dialect",
     "spring.batch.jdbc.initialize-schema=always", "export.schedule=-"})
 @SpringBatchTest
 @EmbeddedKafka(partitions = 3, topics = {"payment-ledger-events"})
@@ -71,13 +75,13 @@ class ExportJobIntegrationTest {
   private ObjectMapper objectMapper;
 
   @Autowired
-  private org.springframework.batch.core.job.Job exportLedgerJob;
+  private Job exportLedgerJob;
 
   @Autowired
-  private org.springframework.batch.core.launch.JobLauncher jobLauncher;
+  private JobLauncher jobLauncher;
 
   @Autowired
-  private org.springframework.batch.core.repository.JobRepository jobRepository;
+  private JobRepository jobRepository;
 
   @Autowired
   private ExportProperties exportProperties;

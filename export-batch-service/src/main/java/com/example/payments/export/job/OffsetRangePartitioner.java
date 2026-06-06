@@ -9,12 +9,15 @@ import java.util.stream.IntStream;
 
 public class OffsetRangePartitioner implements Partitioner {
 
+  public static final String PARTITION_ID = "partitionId";
+  public static final String PARTITION_PREFIX = "partition";
+
   @Override
   public Map<String, ExecutionContext> partition(int gridSize) {
     return IntStream.range(0, gridSize).boxed()
-        .collect(Collectors.toMap(i -> "partition" + i, i -> {
+        .collect(Collectors.toMap(i -> PARTITION_PREFIX + i, i -> {
           ExecutionContext context = new ExecutionContext();
-          context.putInt("partitionId", i);
+          context.putInt(PARTITION_ID, i);
           return context;
         }));
   }

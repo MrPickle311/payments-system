@@ -1,6 +1,7 @@
 package com.example.payments.export.job;
 
 import com.example.payments.common.dto.LedgerEvent;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.listener.ItemWriteListener;
 import org.springframework.batch.core.step.StepExecution;
@@ -16,6 +17,7 @@ import java.util.List;
 @Slf4j
 @Component
 @StepScope
+@RequiredArgsConstructor
 public class PaymentIdTrackingListener implements ItemWriteListener<LedgerEvent> {
 
   private static final String CONTEXT_KEY = "processedPaymentIds";
@@ -25,10 +27,6 @@ public class PaymentIdTrackingListener implements ItemWriteListener<LedgerEvent>
 
   private final List<Long> processedPaymentIds = new ArrayList<>();
   private final MeterRegistry meterRegistry;
-
-  public PaymentIdTrackingListener(MeterRegistry meterRegistry) {
-    this.meterRegistry = meterRegistry;
-  }
 
   @Override
   public void afterWrite(Chunk<? extends LedgerEvent> items) {

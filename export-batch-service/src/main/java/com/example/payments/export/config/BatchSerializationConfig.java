@@ -2,7 +2,6 @@ package com.example.payments.export.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.batch.core.repository.ExecutionContextSerializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,11 +14,8 @@ import java.util.Map;
 @Configuration
 public class BatchSerializationConfig {
 
-  @Autowired
-  private ObjectMapper objectMapper;
-
   @Bean
-  public ExecutionContextSerializer executionContextSerializer() {
+  public ExecutionContextSerializer executionContextSerializer(final ObjectMapper objectMapper) {
     return new ExecutionContextSerializer() {
       @Override
       public Map<String, Object> deserialize(InputStream inputStream) throws IOException {

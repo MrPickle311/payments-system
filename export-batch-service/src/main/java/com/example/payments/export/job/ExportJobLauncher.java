@@ -26,8 +26,8 @@ public class ExportJobLauncher {
       JobParameters params =
           new JobParametersBuilder().addLong("time", System.currentTimeMillis()).toJobParameters();
       jobLauncher.run(exportLedgerJob, params);
-    } catch (Exception e) {
-      log.error("[JobLauncher] Job failed to start: {}", e.getMessage());
+    } catch (Exception exception) {
+      log.error("[JobLauncher] Job failed to start: {}", exception.getMessage());
     }
   }
 }
