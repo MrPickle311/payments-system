@@ -192,28 +192,6 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.openapitools</groupId>
-                <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>7.4.0</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.basedir}/src/main/resources/openapi/openapi.yaml</inputSpec>
-                            <generatorName>spring</generatorName>
-                            <apiPackage>com.example.payments.export.api</apiPackage>
-                            <modelPackage>com.example.payments.export.model</modelPackage>
-                            <configOptions>
-                                <interfaceOnly>true</interfaceOnly>
-                                <useSpringBoot3>true</useSpringBoot3>
-                            </configOptions>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
