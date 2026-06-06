@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<?xml version='1.0' encoding='UTF-8'?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -17,6 +16,9 @@
         <openapi-generator-maven-plugin.version>7.4.0</openapi-generator-maven-plugin.version>
         <checkstyle.failsOnError>false</checkstyle.failsOnError>
         <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
+        <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
+        <groovy.version>4.0.31</groovy.version>
+        <gmavenplus-plugin.version>3.0.2</gmavenplus-plugin.version>
     </properties>
 
     <dependencies>
@@ -72,7 +74,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing</artifactId>
@@ -113,12 +114,11 @@
             <artifactId>jackson-databind-nullable</artifactId>
             <version>${jackson-databind-nullable.version}</version>
         </dependency>
-    
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
-</dependencies>
+    </dependencies>
 
     <build>
         <plugins>
@@ -162,7 +162,6 @@
                 <version>3.3.1</version>
                 <configuration>
                     <configLocation>../checkstyle.xml</configLocation>
-                    <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>false</failsOnError>
                     <linkXRef>false</linkXRef>
@@ -171,6 +170,73 @@
                         <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
                     </sourceDirectories>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>${gmavenplus-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <scripts>
+                                <script>file:///${project.basedir}/src/build/generate-statemachine.groovy</script>
+                            </scripts>
+                            <properties>
+                                <property>
+                                    <name>pumlFile</name>
+                                    <value>${project.basedir}/src/main/resources/statemachine.puml</value>
+                                </property>
+                                <property>
+                                    <name>outputDir</name>
+                                    <value>${project.build.directory}/generated-sources/statemachine</value>
+                                </property>
+                                <property>
+                                    <name>packageName</name>
+                                    <value>com.example.payments.payment.infrastructure.config</value>
+                                </property>
+                                <property>
+                                    <name>stateEnum</name>
+                                    <value>com.example.payments.common.domain.enums.PaymentState</value>
+                                </property>
+                                <property>
+                                    <name>eventEnum</name>
+                                    <value>com.example.payments.common.domain.enums.PaymentEvent</value>
+                                </property>
+                            </properties>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.groovy</groupId>
+                        <artifactId>groovy</artifactId>
+                        <version>${groovy.version}</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/statemachine</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

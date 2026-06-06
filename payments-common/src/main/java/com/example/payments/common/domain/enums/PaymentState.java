@@ -14,14 +14,17 @@ package com.example.payments.common.domain.enums;
  *                                CANCELED        CANCELED
  *
  * Terminal states (no outgoing transitions): FAILED, CANCELED, REFUNDED.
- * COMPLETED is also terminal once REFUND is no longer applicable (handled by legal transitions).
+ * COMPLETED is also terminal once REFUND is no longer applicable.
  */
 public enum PaymentState {
 
     /** Payment has been created but the checkout flow has not started. */
     NEW,
 
-    /** Checkout initiated; awaiting customer action (e.g., 3-D Secure redirect). */
+    /**
+     * Checkout initiated; awaiting customer action
+     * (e.g., 3-D Secure redirect).
+     */
     PENDING,
 
     /** Composite state: authorization and fraud check run in parallel. */
@@ -49,13 +52,17 @@ public enum PaymentState {
     /** Fraud detected — transaction flagged. */
     FRAUD_DETECTED,
 
-    /** Funds have been reserved on the customer's account; capture pending. */
+    /**
+     * Funds have been reserved on the customer's account; capture pending.
+     */
     AUTHORIZED,
 
     /** Funds captured. Digital product can be unlocked and invoice sent. */
     COMPLETED,
 
-    /** Processing failed at any stage (gateway error, fraud, etc.). Terminal. */
+    /**
+     * Processing failed at any stage (gateway error, fraud, etc.). Terminal.
+     */
     FAILED,
 
     /** Payment was voluntarily cancelled before capture. Terminal. */

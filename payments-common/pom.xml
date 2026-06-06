@@ -31,5 +31,9 @@
             <artifactId>jmolecules-events</artifactId>
             <version>1.9.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
     </dependencies>
 </project>

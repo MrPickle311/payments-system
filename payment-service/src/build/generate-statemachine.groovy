@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 
 def pumlFile    = new File(pumlFile as String)
-def outputDir   = new File(outputDir as String)
+def outputDir   = new File((outputDir as String).replace("src/main/java", "target/generated-sources/statemachine"))
 def packageName = packageName as String
 def stateEnum   = stateEnum as String
 def eventEnum   = eventEnum as String

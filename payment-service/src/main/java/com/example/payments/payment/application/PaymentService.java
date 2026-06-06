@@ -21,6 +21,8 @@ import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.stereotype.Service;
+
+import static com.example.payments.common.domain.enums.PaymentEvent.*;
 import static com.example.payments.payment.domain.PaymentConstants.*;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -139,11 +141,11 @@ public class PaymentService {
     }
 
     private void handleBlockedGuards(GuardCheckContext context) {
-        boolean isSelfTransition = (context.getEvent() == PaymentEvent.REDIRECT);
+        boolean isSelfTransition = (context.getEvent() == REDIRECT);
         boolean guardBlocked = !isSelfTransition && context.getStateAfterIds().equals(context.getStateBeforeIds());
 
         if (guardBlocked) {
-            if (context.getEvent() == PaymentEvent.AUTHORIZE) {
+            if (context.getEvent() == AUTHORIZE) {
                 handleFraudGuardBlock(context.getStateMachine(), context.getPayment());
             }
             throw new InvalidTransitionException(
@@ -158,7 +160,7 @@ public class PaymentService {
         log.warn("[Service] AUTHORIZE blocked by fraud guard (score={} risk={}) for payment={}. Auto-failing.", 
                 fraudScore, fraudRisk, payment.getId());
 
-        sendEventToStateMachine(stateMachine, PaymentEvent.FAIL);
+        sendEventToStateMachine(stateMachine, FAIL);
         stateMachinePersister.persist(stateMachine, payment);
         paymentRepository.save(payment);
 
