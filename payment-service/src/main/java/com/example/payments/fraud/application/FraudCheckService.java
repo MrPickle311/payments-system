@@ -7,7 +7,6 @@ import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,22 +15,6 @@ import java.math.BigDecimal;
 
 /**
  * Simulates a call to an external fraud-detection API (Sift / Kount / Stripe Radar).
- *
- * <p>In production this would be an HTTP call via {@code RestClient} or {@code WebClient}.
- * Here we reproduce the essential characteristics: network latency, a risk score in
- * [0, 100], and a binary ALLOW / BLOCK recommendation.
- *
- * <p>This service is called from the {@code fraudCheckGuard} inside the state machine.
- * The guard stores the score in extended state so the audit trail and error messages
- * can reference it later.
- *
- * <h2>Demo scoring rules</h2>
- * <ul>
- *   <li>{@code amount > 5 000} → score 92 (HIGH — blocked)</li>
- *   <li>{@code amount > 1 000} → score 55 (MEDIUM — allowed)</li>
- *   <li>{@code amount > 500}  → score 25 (LOW — allowed)</li>
- *   <li>anything else         → score 10 (MINIMAL — allowed)</li>
- * </ul>
  */
 @Service
 @RequiredArgsConstructor
@@ -39,10 +22,26 @@ import java.math.BigDecimal;
 public class FraudCheckService {
 
     public static final int MEDIUM_RISK_THRESHOLD = 40;
-    private final FraudRecordRepository fraudRecordRepository;
-
     private static final int HIGH_RISK_THRESHOLD = 70;
     private static final long API_LATENCY_MS = 80;
+
+    private static final String HIGH_RISK_LEVEL = "HIGH";
+    private static final String MEDIUM_RISK_LEVEL = "MEDIUM";
+    private static final String LOW_RISK_LEVEL = "LOW";
+    
+    private static final String BLOCK_RECOMMENDATION = "BLOCK";
+    private static final String ALLOW_RECOMMENDATION = "ALLOW";
+
+    private static final BigDecimal AMOUNT_THRESHOLD_HIGH = new BigDecimal("5000");
+    private static final BigDecimal AMOUNT_THRESHOLD_MEDIUM = new BigDecimal("1000");
+    private static final BigDecimal AMOUNT_THRESHOLD_LOW = new BigDecimal("500");
+
+    private static final int SCORE_HIGH = 92;
+    private static final int SCORE_MEDIUM = 55;
+    private static final int SCORE_LOW = 25;
+    private static final int SCORE_MINIMAL = 10;
+
+    private final FraudRecordRepository fraudRecordRepository;
 
     public record FraudResult(int score, String riskLevel, String recommendation) {
         public boolean isHighRisk() {
@@ -50,13 +49,6 @@ public class FraudCheckService {
         }
     }
 
-    /**
-     * Evaluates fraud risk for a payment before it is authorised.
-     *
-     * @param paymentId internal payment identifier (sent to fraud API as correlation ID)
-     * @param money     transaction amount and currency
-     * @return the fraud assessment
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Observed(name = "evaluate-fraud")
     public FraudResult evaluate(@SpanTag("payment.id") Long paymentId, Money money) {
@@ -67,12 +59,11 @@ public class FraudCheckService {
 
         int score = computeScore(money.getAmount());
         String riskLevel = getRiskLevel(score);
-        String recommendation = score >= HIGH_RISK_THRESHOLD ? "BLOCK" : "ALLOW";
+        String recommendation = score >= HIGH_RISK_THRESHOLD ? BLOCK_RECOMMENDATION : ALLOW_RECOMMENDATION;
 
         log.info("[FraudAPI] ← Response received | payment={} score={} risk={} recommendation={}",
                 paymentId, score, riskLevel, recommendation);
 
-        // Save fraud result to our new domain repository
         FraudRecord fraudRecord = FraudRecord.builder()
                 .paymentId(paymentId)
                 .score(score)
@@ -86,14 +77,14 @@ public class FraudCheckService {
 
     private static String getRiskLevel(int score) {
         if (score >= HIGH_RISK_THRESHOLD) {
-            return "HIGH";
-        } 
-        
+            return HIGH_RISK_LEVEL;
+        }
+
         if (score >= MEDIUM_RISK_THRESHOLD) {
-            return "MEDIUM";
-        } 
-        
-        return "LOW";
+            return MEDIUM_RISK_LEVEL;
+        }
+
+        return LOW_RISK_LEVEL;
     }
 
     private int computeScore(BigDecimal amount) {

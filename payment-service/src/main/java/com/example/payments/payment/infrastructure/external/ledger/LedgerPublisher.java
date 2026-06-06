@@ -1,8 +1,7 @@
 package com.example.payments.payment.infrastructure.external.ledger;
-
-import com.example.payments.common.dto.LedgerEvent;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 

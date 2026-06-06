@@ -1,6 +1,10 @@
 package com.example.payments.fraud.domain;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 

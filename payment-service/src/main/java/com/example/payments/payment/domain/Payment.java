@@ -3,7 +3,13 @@ package com.example.payments.payment.domain;
 import com.example.payments.common.domain.enums.PaymentState;
 import com.example.payments.payment.domain.event.PaymentDomainEvent;
 import com.example.payments.common.domain.Money;
-import lombok.*;
+import lombok.Getter;
+import lombok.AccessLevel;
+import lombok.ToString;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

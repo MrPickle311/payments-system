@@ -10,25 +10,12 @@ import org.springframework.stereotype.Component;
 public class FraudRecordRepositoryAdapter implements FraudRecordRepository {
 
     private final SpringDataFraudRecordRepository repository;
+    private final FraudRecordEntityMapper mapper;
 
     @Override
     public FraudRecord save(FraudRecord fraudRecord) {
-        FraudRecordJpaEntity entity = FraudRecordJpaEntity.builder()
-                .paymentId(fraudRecord.getPaymentId())
-                .score(fraudRecord.getScore())
-                .riskLevel(fraudRecord.getRiskLevel())
-                .recommendation(fraudRecord.getRecommendation())
-                .build();
-        
+        FraudRecordJpaEntity entity = mapper.toEntity(fraudRecord);
         FraudRecordJpaEntity saved = repository.save(entity);
-        
-        return FraudRecord.builder()
-                .id(saved.getId())
-                .paymentId(saved.getPaymentId())
-                .score(saved.getScore())
-                .riskLevel(saved.getRiskLevel())
-                .recommendation(saved.getRecommendation())
-                .createdAt(saved.getCreatedAt())
-                .build();
+        return mapper.toDomain(saved);
     }
 }

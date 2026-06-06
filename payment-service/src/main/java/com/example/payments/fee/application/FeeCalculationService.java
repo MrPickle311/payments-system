@@ -25,8 +25,9 @@ import java.math.RoundingMode;
 public class FeeCalculationService {
 
     private static final BigDecimal PERCENTAGE_RATE = new BigDecimal("0.029");
-    private static final BigDecimal FLAT_FEE        = new BigDecimal("0.30");
-    private static final int        SCALE            = 4;
+    private static final BigDecimal FLAT_FEE = new BigDecimal("0.30");
+    private static final int SCALE = 4;
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final PaymentFeeRepository paymentFeeRepository;
 
@@ -35,7 +36,7 @@ public class FeeCalculationService {
         Money percentageFee = grossAmount.multiply(PERCENTAGE_RATE, SCALE, RoundingMode.HALF_UP);
         Money totalFee = percentageFee.add(Money.of(FLAT_FEE, grossAmount.getCurrency()));
         Money netAmount = grossAmount.subtract(totalFee);
-        
+
         return new FeeBreakdown(grossAmount, percentageFee, Money.of(FLAT_FEE, grossAmount.getCurrency()), totalFee, netAmount);
     }
 
@@ -44,24 +45,24 @@ public class FeeCalculationService {
      */
     @Observed(name = "save-settlement")
     public PaymentFee saveSettlement(@SpanTag("payment.id") Long paymentId, Money grossAmount) {
-        FeeBreakdown b = calculate(grossAmount);
+        FeeBreakdown breakdown = calculate(grossAmount);
 
         log.info("[FeeCalc] Settlement for payment {} | gross={} fee={} ({} % + {} flat) net={} {}",
                 paymentId,
-                b.grossAmount().getAmount(),
-                b.totalFee().getAmount(),
-                PERCENTAGE_RATE.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString(),
+                breakdown.grossAmount().getAmount(),
+                breakdown.totalFee().getAmount(),
+                PERCENTAGE_RATE.multiply(HUNDRED).stripTrailingZeros().toPlainString(),
                 FLAT_FEE,
-                b.netAmount().getAmount(),
+                breakdown.netAmount().getAmount(),
                 grossAmount.getCurrency());
 
         PaymentFee fee = PaymentFee.builder()
                 .paymentId(paymentId)
-                .grossAmount(b.grossAmount().getAmount())
-                .percentageFee(b.percentageFee().getAmount())
-                .flatFee(b.flatFee().getAmount())
-                .totalFee(b.totalFee().getAmount())
-                .netAmount(b.netAmount().getAmount())
+                .grossAmount(breakdown.grossAmount().getAmount())
+                .percentageFee(breakdown.percentageFee().getAmount())
+                .flatFee(breakdown.flatFee().getAmount())
+                .totalFee(breakdown.totalFee().getAmount())
+                .netAmount(breakdown.netAmount().getAmount())
                 .currency(grossAmount.getCurrency())
                 .build();
 

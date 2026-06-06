@@ -1,6 +1,11 @@
 package com.example.payments.fee.domain;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
