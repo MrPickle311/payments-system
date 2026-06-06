@@ -88,10 +88,16 @@ public class FraudCheckService {
     }
 
     private int computeScore(BigDecimal amount) {
-        if (amount.compareTo(new BigDecimal("5000")) > 0) return 92;
-        if (amount.compareTo(new BigDecimal("1000")) > 0) return 55;
-        if (amount.compareTo(new BigDecimal("500"))  > 0) return 25;
-        return 10;
+        if (amount.compareTo(AMOUNT_THRESHOLD_HIGH) > 0) {
+            return SCORE_HIGH;
+        }
+        if (amount.compareTo(AMOUNT_THRESHOLD_MEDIUM) > 0) {
+            return SCORE_MEDIUM;
+        }
+        if (amount.compareTo(AMOUNT_THRESHOLD_LOW) > 0) {
+            return SCORE_LOW;
+        }
+        return SCORE_MINIMAL;
     }
 
     private void simulateNetworkLatency() {
