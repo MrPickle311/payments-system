@@ -7,6 +7,7 @@ import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,10 +38,10 @@ import java.math.BigDecimal;
 @Slf4j
 public class FraudCheckService {
 
+    public static final int MEDIUM_RISK_THRESHOLD = 40;
     private final FraudRecordRepository fraudRecordRepository;
 
     private static final int HIGH_RISK_THRESHOLD = 70;
-    /** Simulated round-trip to a remote fraud API. */
     private static final long API_LATENCY_MS = 80;
 
     public record FraudResult(int score, String riskLevel, String recommendation) {
@@ -65,27 +66,35 @@ public class FraudCheckService {
         simulateNetworkLatency();
 
         int score = computeScore(money.getAmount());
-        String riskLevel = score >= HIGH_RISK_THRESHOLD ? "HIGH"
-                : score >= 40 ? "MEDIUM"
-                : "LOW";
+        String riskLevel = getRiskLevel(score);
         String recommendation = score >= HIGH_RISK_THRESHOLD ? "BLOCK" : "ALLOW";
 
         log.info("[FraudAPI] ← Response received | payment={} score={} risk={} recommendation={}",
                 paymentId, score, riskLevel, recommendation);
 
         // Save fraud result to our new domain repository
-        FraudRecord record = FraudRecord.builder()
+        FraudRecord fraudRecord = FraudRecord.builder()
                 .paymentId(paymentId)
                 .score(score)
                 .riskLevel(riskLevel)
                 .recommendation(recommendation)
                 .build();
-        fraudRecordRepository.save(record);
+        fraudRecordRepository.save(fraudRecord);
 
         return new FraudResult(score, riskLevel, recommendation);
     }
 
-    // -------------------------------------------------------------------------
+    private static String getRiskLevel(int score) {
+        if (score >= HIGH_RISK_THRESHOLD) {
+            return "HIGH";
+        } 
+        
+        if (score >= MEDIUM_RISK_THRESHOLD) {
+            return "MEDIUM";
+        } 
+        
+        return "LOW";
+    }
 
     private int computeScore(BigDecimal amount) {
         if (amount.compareTo(new BigDecimal("5000")) > 0) return 92;
@@ -98,6 +107,7 @@ public class FraudCheckService {
         try {
             Thread.sleep(API_LATENCY_MS);
         } catch (InterruptedException e) {
+            log.warn("Network latency simulation interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

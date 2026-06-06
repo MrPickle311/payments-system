@@ -15,6 +15,7 @@ import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.stereotype.Service;
+import static com.example.payments.payment.domain.PaymentConstants.*;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
@@ -50,9 +51,9 @@ public class PaymentService {
 
         paymentHistoryRepository.save(PaymentHistory.builder()
                 .paymentId(payment.getId())
-                .fromState("—")
+                .fromState(INITIAL_FROM_STATE)
                 .toState(PaymentState.NEW.name())
-                .event("CREATED")
+                .event(EVENT_CREATED)
                 .build());
 
         log.info("[Service] Created payment id={} transactionId={}",
@@ -105,8 +106,8 @@ public class PaymentService {
 
             if (guardBlocked) {
                 if (event == PaymentEvent.AUTHORIZE) {
-                    Integer fraudScore = sm.getExtendedState().get("fraudScore", Integer.class);
-                    String  fraudRisk  = sm.getExtendedState().get("fraudRisk",  String.class);
+                    Integer fraudScore = sm.getExtendedState().get(FRAUD_SCORE, Integer.class);
+                    String  fraudRisk  = sm.getExtendedState().get(FRAUD_RISK,  String.class);
                     log.warn("[Service] AUTHORIZE blocked by fraud guard (score={} risk={}) "
                             + "for payment={}. Auto-failing.", fraudScore, fraudRisk, paymentId);
 

@@ -4,10 +4,16 @@ import com.example.payments.payment.domain.Payment;
 import com.example.payments.common.domain.enums.PaymentEvent;
 import com.example.payments.common.domain.enums.PaymentState;
 import org.springframework.statemachine.StateMachine;
+import org.springframework.statemachine.StateMachineContext;
 import org.springframework.statemachine.persist.StateMachinePersister;
 import org.springframework.statemachine.support.DefaultExtendedState;
 import org.springframework.statemachine.support.DefaultStateMachineContext;
 import org.springframework.stereotype.Component;
+import static com.example.payments.payment.domain.PaymentConstants.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Custom {@link StateMachinePersister} that maps between a {@link Payment}
@@ -24,7 +30,7 @@ public class PaymentStateMachinePersister
                         Payment payment) {
         String stateStr = stateMachine.getState().getIds().stream()
                 .map(Enum::name)
-                .collect(java.util.stream.Collectors.joining(","));
+                .collect(Collectors.joining(","));
         log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
         payment.setState(stateStr);
     }
@@ -40,18 +46,18 @@ public class PaymentStateMachinePersister
                 payment.getState(), payment.getId());
 
         DefaultExtendedState extendedState = new DefaultExtendedState();
-        extendedState.getVariables().put("paymentId",       payment.getId());
-        extendedState.getVariables().put("paymentAmount",   payment.getMoney().getAmount());
-        extendedState.getVariables().put("paymentCurrency", payment.getMoney().getCurrency());
-        extendedState.getVariables().put("paymentCreatedAt", payment.getCreatedAt());
-        extendedState.getVariables().put("isRestoring",     Boolean.TRUE);
+        extendedState.getVariables().put(PAYMENT_ID,       payment.getId());
+        extendedState.getVariables().put(PAYMENT_AMOUNT,   payment.getMoney().getAmount());
+        extendedState.getVariables().put(PAYMENT_CURRENCY, payment.getMoney().getCurrency());
+        extendedState.getVariables().put(PAYMENT_CREATED_AT, payment.getCreatedAt());
+        extendedState.getVariables().put(IS_RESTORING,     Boolean.TRUE);
 
-        org.springframework.statemachine.StateMachineContext<PaymentState, PaymentEvent> context;
+        StateMachineContext<PaymentState, PaymentEvent> context;
         if (stateNames.length > 1) {
-            java.util.List<org.springframework.statemachine.StateMachineContext<PaymentState, PaymentEvent>> childs = new java.util.ArrayList<>();
-            for (int i = 1; i < stateNames.length; i++) {
-                childs.add(new DefaultStateMachineContext<>(PaymentState.valueOf(stateNames[i]), null, null, null));
-            }
+            List<StateMachineContext<PaymentState, PaymentEvent>> childs = Arrays.stream(stateNames)
+                    .skip(1)
+                    .map(name -> new DefaultStateMachineContext<PaymentState, PaymentEvent>(PaymentState.valueOf(name), null, null, null))
+                    .collect(Collectors.toList());
             context = new DefaultStateMachineContext<>(childs, storedState, null, null, extendedState);
         } else {
             context = new DefaultStateMachineContext<>(storedState, null, null, extendedState);
@@ -64,7 +70,7 @@ public class PaymentStateMachinePersister
 
         stateMachine.start();
 
-        stateMachine.getExtendedState().getVariables().put("isRestoring", Boolean.FALSE);
+        stateMachine.getExtendedState().getVariables().put(IS_RESTORING, Boolean.FALSE);
 
         return stateMachine;
     }

@@ -9,6 +9,7 @@ import com.example.payments.payment.infrastructure.external.ledger.LedgerPublish
 import com.example.payments.payment.infrastructure.external.wallet.WalletClient;
 import com.example.payments.common.domain.Money;
 import org.springframework.context.annotation.Configuration;
+import static com.example.payments.payment.domain.PaymentConstants.*;
 import org.springframework.statemachine.action.Action;
 import org.springframework.statemachine.config.EnableStateMachineFactory;
 import org.springframework.statemachine.guard.Guard;
@@ -90,17 +91,17 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Guard<PaymentState, PaymentEvent> fraudCheckGuard() {
         return context -> {
-            Long paymentId = context.getExtendedState().get("paymentId", Long.class);
-            BigDecimal amount = context.getExtendedState().get("paymentAmount", BigDecimal.class);
-            String currency = context.getExtendedState().get("paymentCurrency", String.class);
+            Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+            BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+            String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
             Money money = Money.of(amount, currency);
 
             FraudCheckService.FraudResult result =
                     fraudCheckService.evaluate(paymentId, money);
 
             // Stash the score so downstream code (service layer, error messages) can read it.
-            context.getExtendedState().getVariables().put("fraudScore", result.score());
-            context.getExtendedState().getVariables().put("fraudRisk", result.riskLevel());
+            context.getExtendedState().getVariables().put(FRAUD_SCORE, result.score());
+            context.getExtendedState().getVariables().put(FRAUD_RISK, result.riskLevel());
 
             if (result.isHighRisk()) {
                 log.warn("[Guard:Fraud] BLOCKED payment={} score={} risk={}",
@@ -123,9 +124,9 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Guard<PaymentState, PaymentEvent> refundWindowGuard() {
         return context -> {
-            Long paymentId = context.getExtendedState().get("paymentId", Long.class);
+            Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
             LocalDateTime createdAt =
-                    context.getExtendedState().get("paymentCreatedAt", LocalDateTime.class);
+                    context.getExtendedState().get(PAYMENT_CREATED_AT, LocalDateTime.class);
 
             if (createdAt == null) {
                 // Fail open: if we cannot determine age, allow the refund and let
@@ -164,18 +165,18 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Action<PaymentState, PaymentEvent> feeCalculationAction() {
         return context -> {
-            Long paymentId = context.getExtendedState().get("paymentId", Long.class);
-            BigDecimal amount = context.getExtendedState().get("paymentAmount", BigDecimal.class);
-            String currency = context.getExtendedState().get("paymentCurrency", String.class);
+            Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+            BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+            String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
             Money money = Money.of(amount, currency);
 
             FeeBreakdown breakdown = feeCalculationService.calculate(money);
 
             // Store in ExtendedState — settlementAction reads these on the COMPLETE event.
             context.getExtendedState().getVariables()
-                    .put("processingFee", breakdown.totalFee().getAmount());
+                    .put(PROCESSING_FEE, breakdown.totalFee().getAmount());
             context.getExtendedState().getVariables()
-                    .put("netAmount", breakdown.netAmount().getAmount());
+                    .put(NET_AMOUNT, breakdown.netAmount().getAmount());
 
             log.info("[Action:FeeCalc] payment={} | gross={} | fee={} ({}% + {} flat) | net={}",
                     paymentId,
@@ -191,7 +192,7 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Action<PaymentState, PaymentEvent> feeCalculationErrorAction() {
         return context -> log.error("[Action:FeeCalc] ERROR during fee calculation for payment={}: {}",
-                context.getExtendedState().get("paymentId", Long.class),
+                context.getExtendedState().get(PAYMENT_ID, Long.class),
                 context.getException() != null ? context.getException().getMessage() : "unknown");
     }
 
@@ -210,9 +211,9 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Action<PaymentState, PaymentEvent> settlementAction() {
         return context -> {
-            Long paymentId = context.getExtendedState().get("paymentId", Long.class);
-            BigDecimal amount   = context.getExtendedState().get("paymentAmount",   BigDecimal.class);
-            String currency     = context.getExtendedState().get("paymentCurrency", String.class);
+            Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+            BigDecimal amount   = context.getExtendedState().get(PAYMENT_AMOUNT,   BigDecimal.class);
+            String currency     = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
             
             FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, currency));
             BigDecimal fee = breakdown.totalFee().getAmount();
@@ -245,7 +246,7 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Action<PaymentState, PaymentEvent> settlementErrorAction() {
         return context -> log.error("[Action:Settlement] ERROR during settlement for payment={}: {}",
-                context.getExtendedState().get("paymentId", Long.class),
+                context.getExtendedState().get(PAYMENT_ID, Long.class),
                 context.getException() != null ? context.getException().getMessage() : "unknown");
     }
 
@@ -267,14 +268,14 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
     @Override
     protected Action<PaymentState, PaymentEvent> completedEntryAction() {
         return context -> {
-            if (Boolean.TRUE.equals(context.getExtendedState().get("isRestoring", Boolean.class))) {
+            if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class))) {
                 log.debug("[Entry:Completed] Skipped — restoring from DB");
                 return;
             }
 
-            Long paymentId   = context.getExtendedState().get("paymentId",   Long.class);
-            BigDecimal amount   = context.getExtendedState().get("paymentAmount",   BigDecimal.class);
-            String currency  = context.getExtendedState().get("paymentCurrency", String.class);
+            Long paymentId   = context.getExtendedState().get(PAYMENT_ID,   Long.class);
+            BigDecimal amount   = context.getExtendedState().get(PAYMENT_AMOUNT,   BigDecimal.class);
+            String currency  = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
             
             FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, currency));
             BigDecimal net = breakdown.netAmount().getAmount();
@@ -295,6 +296,7 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
+            log.warn("Internal API simulation interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

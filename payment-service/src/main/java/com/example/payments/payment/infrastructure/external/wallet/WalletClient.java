@@ -2,7 +2,6 @@ package com.example.payments.payment.infrastructure.external.wallet;
 
 import com.example.payments.common.dto.DebitRequest;
 import com.example.payments.common.dto.DebitResponse;
-import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,23 +17,22 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class WalletClient {
 
-    @Value("${wallet.service.url}")
-    private String walletServiceUrl;
-
+    public static final String WALLET_DEBIT_PATH = "/wallets/debit";
+    private final WalletProperties walletProperties;
     private final RestTemplate restTemplate;
 
     public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
-        log.info("[PaymentService -> WalletClient] Calling Wallet Service for paymentId={} amount={} {}", 
+        log.info("[PaymentService -> WalletClient] Calling Wallet Service for paymentId={} amount={} {}",
                 paymentId, amount, currency);
-        
+
         DebitRequest request = DebitRequest.builder()
                 .paymentId(paymentId)
                 .amount(amount)
                 .currency(currency)
                 .build();
-        
-        String url = walletServiceUrl + "/wallets/debit"; 
-        
+
+        String url = walletProperties.getUrl() + WALLET_DEBIT_PATH;
+
         try {
             return restTemplate.postForObject(url, request, DebitResponse.class);
         } catch (Exception e) {
