@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-public final class PaymentWebhookController implements WebhookApi {
+public class PaymentWebhookController implements WebhookApi {
 
   private final PaymentService paymentService;
 

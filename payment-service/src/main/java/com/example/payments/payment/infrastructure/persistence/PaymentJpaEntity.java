@@ -39,7 +39,7 @@ public class PaymentJpaEntity {
   @Column(nullable = false, length = 3)
   private String currency;
 
-  @Column(nullable = false, length = 32)
+  @Column(nullable = false, length = 255)
   private String state;
 
   @CreationTimestamp

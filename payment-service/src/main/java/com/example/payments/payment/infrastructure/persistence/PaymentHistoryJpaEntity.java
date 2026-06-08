@@ -31,13 +31,13 @@ public class PaymentHistoryJpaEntity {
   @Column(name = "payment_id", nullable = false)
   private Long paymentId;
 
-  @Column(name = "from_state", length = 32)
+  @Column(name = "from_state", length = 255)
   private String fromState;
 
-  @Column(name = "to_state", nullable = false, length = 32)
+  @Column(name = "to_state", nullable = false, length = 255)
   private String toState;
 
-  @Column(nullable = false, length = 32)
+  @Column(nullable = false, length = 255)
   private String event;
 
   @CreationTimestamp
