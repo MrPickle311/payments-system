@@ -6,14 +6,14 @@ This is the main root module of the **StateMachine Payments** project, a highly 
 
 ## 🧭 Navigation
 
-- 🏠 **[Workspace Root README](file:///home/damian/sandbox/README.md)**
+- 🏠 **[Workspace Root README](../README.md)**
 - 📁 **Services and Submodules:**
-  - [`payments-common`](file:///home/damian/sandbox/statemachine-payments/payments-common/README.md) - Common Models and DTOs
-  - [`payment-service`](file:///home/damian/sandbox/statemachine-payments/payment-service/README.md) - Payment State Machine Engine
-  - [`wallet-service`](file:///home/damian/sandbox/statemachine-payments/wallet-service/README.md) - Balance Management
-  - [`ledger-service`](file:///home/damian/sandbox/statemachine-payments/ledger-service/README.md) - Financial Accounting Book
-  - [`export-batch-service`](file:///home/damian/sandbox/statemachine-payments/export-batch-service/README.md) - Settlement Batch Processor
-  - [`mock-regulatory-service`](file:///home/damian/sandbox/statemachine-payments/mock-regulatory-service/README.md) - External Audit Simulation
+  - [`payments-common`](payments-common/README.md) - Common Models and DTOs
+  - [`payment-service`](payment-service/README.md) - Payment State Machine Engine
+  - [`wallet-service`](wallet-service/README.md) - Balance Management
+  - [`ledger-service`](ledger-service/README.md) - Financial Accounting Book
+  - [`export-batch-service`](export-batch-service/README.md) - Settlement Batch Processor
+  - [`mock-regulatory-service`](mock-regulatory-service/README.md) - External Audit Simulation
 
 ---
 
@@ -42,7 +42,7 @@ The system processes financial transactions with transactional safety:
 ### Prerequisites
 - Java 25
 - Apache Maven 3.9+
-- Running instance of PostgreSQL and Kafka
+- Running instance of PostgreSQL, Redis, and Kafka (orchestrated in `/homelab/titan-gitops`)
 
 ### Verification Commands
 The system adheres to strict quality checks:

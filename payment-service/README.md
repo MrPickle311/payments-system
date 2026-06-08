@@ -6,8 +6,8 @@ The core payment orchestration engine of the ecosystem. It manages the transacti
 
 ## 🧭 Navigation
 
-- 🏠 **[Workspace Root README](file:///home/damian/sandbox/README.md)**
-- 📁 **[StateMachine Payments Root README](file:///home/damian/sandbox/statemachine-payments/README.md)**
+- 🏠 **[Workspace Root README](../../README.md)**
+- 📁 **[StateMachine Payments Root README](../README.md)**
 
 ---
 

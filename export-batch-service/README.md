@@ -6,8 +6,8 @@ The **Export Batch Service** is a highly reliable micro-batch processor built on
 
 ## 🧭 Navigation
 
-- 🏠 **[Workspace Root README](file:///home/damian/sandbox/README.md)**
-- 📁 **[StateMachine Payments Root README](file:///home/damian/sandbox/statemachine-payments/README.md)**
+- 🏠 **[Workspace Root README](../../README.md)**
+- 📁 **[StateMachine Payments Root README](../README.md)**
 
 ---
 
