@@ -2,7 +2,7 @@ package com.example.payments.fee.application;
 
 import com.example.payments.fee.domain.PaymentFee;
 import com.example.payments.fee.domain.PaymentFeeRepository;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;

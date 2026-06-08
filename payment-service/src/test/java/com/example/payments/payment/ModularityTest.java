@@ -14,7 +14,7 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 public class ModularityTest {
 
   @ArchTest
-  static final ArchRule MODULARITY_RULE =
-      slices().matching("com.example.payments.(*)..").should().beFreeOfCycles()
-          .ignoreDependency(alwaysTrue(), resideInAnyPackage("..api.model..", "..api.generated.."));
+  static final ArchRule MODULARITY_RULE = slices().matching("com.example.payments.(*)..").should()
+      .beFreeOfCycles().ignoreDependency(alwaysTrue(),
+          resideInAnyPackage("..api.model..", "..api.generated..", "..sharedkernel.."));
 }

@@ -1,7 +1,7 @@
 package com.example.payments.fraud.application;
 
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 
 public interface FraudCheckPort {
   FraudResult evaluate(Long paymentId, Money money);

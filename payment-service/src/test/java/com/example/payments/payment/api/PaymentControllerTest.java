@@ -4,7 +4,7 @@ package com.example.payments.payment.api;
 
 import com.example.payments.payment.api.model.ApiPaymentHistory;
 import com.example.payments.payment.application.PaymentService;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentHistory;
 import org.junit.jupiter.api.BeforeEach;

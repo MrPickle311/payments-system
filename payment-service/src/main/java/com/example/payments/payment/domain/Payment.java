@@ -2,6 +2,7 @@ package com.example.payments.payment.domain;
 
 import com.example.payments.payment.domain.event.PaymentCreatedEvent;
 import com.example.payments.payment.domain.event.PaymentStateChangedEvent;
+import com.example.payments.sharedkernel.Money;
 
 import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.payment.domain.event.PaymentDomainEvent;

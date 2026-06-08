@@ -3,7 +3,7 @@ package com.example.payments.payment.infrastructure.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;

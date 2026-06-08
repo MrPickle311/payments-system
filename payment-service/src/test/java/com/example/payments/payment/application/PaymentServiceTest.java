@@ -1,6 +1,6 @@
 package com.example.payments.payment.application;
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentHistory;
 import com.example.payments.payment.domain.PaymentNotFoundException;

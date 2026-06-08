@@ -1,6 +1,6 @@
 package com.example.payments.payment.infrastructure.persistence;
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

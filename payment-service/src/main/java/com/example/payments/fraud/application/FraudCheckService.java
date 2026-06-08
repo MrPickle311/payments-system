@@ -2,7 +2,7 @@ package com.example.payments.fraud.application;
 
 import com.example.payments.fraud.domain.FraudRecord;
 import com.example.payments.fraud.domain.FraudRecordRepository;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
 import lombok.RequiredArgsConstructor;

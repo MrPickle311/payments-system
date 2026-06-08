@@ -4,7 +4,7 @@ import com.example.payments.fee.application.FeeCalculationPort;
 import com.example.payments.fee.application.FeeCalculationPort.FeeBreakdown;
 import com.example.payments.fraud.application.FraudCheckPort;
 import com.example.payments.fraud.application.FraudCheckPort.FraudResult;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.payment.infrastructure.external.ledger.LedgerPublisher;

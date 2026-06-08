@@ -20,7 +20,8 @@ public class GlobalArchitectureTest {
   @ArchTest
   static final ArchRule NO_SERVICE_IMPORTS_FROM_OTHER_SERVICES =
       slices().matching("com.example.payments.(*)..").should().notDependOnEachOther()
-          .ignoreDependency(alwaysTrue(), JavaClass.Predicates.resideInAPackage("..common.."))
+          .ignoreDependency(alwaysTrue(),
+              JavaClass.Predicates.resideInAnyPackage("..common..", "..sharedkernel.."))
           .ignoreDependency(
               JavaClass.Predicates.resideInAnyPackage(FEE_PACKAGE, FRAUD_PACKAGE, PAYMENT_PACKAGE),
               JavaClass.Predicates.resideInAnyPackage(FEE_PACKAGE, FRAUD_PACKAGE, PAYMENT_PACKAGE));

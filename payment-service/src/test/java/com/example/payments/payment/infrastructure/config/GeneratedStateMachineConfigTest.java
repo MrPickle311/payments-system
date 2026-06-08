@@ -2,7 +2,7 @@ package com.example.payments.payment.infrastructure.config;
 
 
 import com.example.payments.payment.domain.InvalidTransitionException;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentHistoryRepository;
 import com.example.payments.payment.domain.PaymentRepository;

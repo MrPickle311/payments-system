@@ -1,6 +1,6 @@
 package com.example.payments.fee.domain;
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import org.jmolecules.ddd.annotation.ValueObject;
 
 @ValueObject

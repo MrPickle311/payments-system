@@ -1,7 +1,7 @@
 package com.example.payments.fee.application;
 
 
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 
 import java.math.BigDecimal;
 

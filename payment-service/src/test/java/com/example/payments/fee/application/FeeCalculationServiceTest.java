@@ -3,7 +3,7 @@ package com.example.payments.fee.application;
 import com.example.payments.fee.application.FeeCalculationPort.FeeBreakdown;
 import com.example.payments.fee.domain.PaymentFee;
 import com.example.payments.fee.domain.PaymentFeeRepository;
-import com.example.payments.payment.domain.Money;
+import com.example.payments.sharedkernel.Money;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
