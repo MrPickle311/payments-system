@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.payments.mock.regulatory.application.RegulatoryService;
 import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
+import com.example.payments.mock.regulatory.api.mapper.RegulatoryReportMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ class RegulatoryControllerTest {
   @MockitoBean
   private RegulatoryService regulatoryService;
 
+  @MockitoBean
+  private RegulatoryReportMapper regulatoryReportMapper;
+
   @Autowired
   private ObjectMapper objectMapper;
 
@@ -39,8 +43,10 @@ class RegulatoryControllerTest {
   void testReceiveReportSuccess() throws Exception {
     RegulatoryReportRequest request =
         RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
+    RegulatoryReportDto dto = new RegulatoryReportDto();
 
-    when(regulatoryService.processReport(any(RegulatoryReportDto.class))).thenReturn(ACCEPTED);
+    when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
+    when(regulatoryService.processReport(dto)).thenReturn(ACCEPTED);
 
     mockMvc
         .perform(post(REGULATORY_PATH + REPORT_PATH).contentType(MediaType.APPLICATION_JSON)
@@ -52,8 +58,10 @@ class RegulatoryControllerTest {
   void testReceiveReportFailure() throws Exception {
     RegulatoryReportRequest request =
         RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
+    RegulatoryReportDto dto = new RegulatoryReportDto();
 
-    when(regulatoryService.processReport(any(RegulatoryReportDto.class)))
+    when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
+    when(regulatoryService.processReport(dto))
         .thenThrow(new IllegalStateException(CHAOS));
 
     mockMvc
