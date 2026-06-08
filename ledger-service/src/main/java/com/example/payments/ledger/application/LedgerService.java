@@ -2,7 +2,8 @@ package com.example.payments.ledger.application;
 
 import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.ledger.domain.LedgerEntry;
-import com.example.payments.ledger.infrastructure.persistence.LedgerEntryRepository;
+import com.example.payments.ledger.domain.LedgerRepository;
+import com.example.payments.ledger.application.mapper.LedgerMapper;
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,22 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class LedgerService {
-    private final LedgerEntryRepository ledgerEntryRepository;
+  private final LedgerRepository ledgerRepository;
+  private final LedgerMapper ledgerMapper;
 
-    @Transactional
-    @Observed(name = "record-ledger-entry")
-    public void record(LedgerEvent event) {
-        log.info("[LedgerService] Recording ledger entry for paymentId={}", event.getPaymentId());
+  @Transactional
+  @Observed(name = "record-ledger-entry")
+  public void recordEvent(LedgerEvent event) {
+    log.info("[LedgerService] Recording ledger entry for paymentId={}", event.getPaymentId());
 
-        LedgerEntry entry = LedgerEntry.builder()
-                .paymentId(event.getPaymentId())
-                .grossAmount(event.getGrossAmount())
-                .netAmount(event.getNetAmount())
-                .currency(event.getCurrency())
-                .timestamp(event.getTimestamp())
-                .build();
+    LedgerEntry entry = ledgerMapper.toEntity(event);
 
-        ledgerEntryRepository.save(entry);
-        log.info("[LedgerService] Ledger entry saved for paymentId={}", event.getPaymentId());
-    }
+    ledgerRepository.save(entry);
+    log.info("[LedgerService] Ledger entry saved for paymentId={}", event.getPaymentId());
+  }
 }
