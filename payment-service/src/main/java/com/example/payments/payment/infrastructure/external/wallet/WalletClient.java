@@ -1,4 +1,5 @@
 package com.example.payments.payment.infrastructure.external.wallet;
+
 import lombok.extern.slf4j.Slf4j;
 
 import com.example.payments.common.dto.DebitRequest;
@@ -9,35 +10,31 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 
-/**
- * Client to communicate with the Wallet Service via REST API.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WalletClient {
 
-    public static final String WALLET_DEBIT_PATH = "/wallets/debit";
-    private final WalletProperties walletProperties;
-    private final RestTemplate restTemplate;
+  public static final String WALLET_DEBIT_PATH = "/wallets/debit";
+  private final WalletProperties walletProperties;
+  private final RestTemplate restTemplate;
 
-    public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
-        log.info("[PaymentService -> WalletClient] Calling Wallet Service for paymentId={} amount={} {}",
-                paymentId, amount, currency);
+  public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
+    log.info(
+        "[PaymentService -> WalletClient] Calling Wallet Service for paymentId={} amount={} {}",
+        paymentId, amount, currency);
 
-        DebitRequest request = DebitRequest.builder()
-                .paymentId(paymentId)
-                .amount(amount)
-                .currency(currency)
-                .build();
+    DebitRequest request =
+        DebitRequest.builder().paymentId(paymentId).amount(amount).currency(currency).build();
 
-        String url = walletProperties.getUrl() + WALLET_DEBIT_PATH;
+    String url = walletProperties.getUrl() + WALLET_DEBIT_PATH;
 
-        try {
-            return restTemplate.postForObject(url, request, DebitResponse.class);
-        } catch (Exception e) {
-            log.error("[WalletClient] ERROR calling Wallet Service: {}", e.getMessage());
-            return DebitResponse.builder().status("FAILED").build();
-        }
+    try {
+      return restTemplate.postForObject(url, request, DebitResponse.class);
+    } catch (Exception e) {
+      log.error("[WalletClient] ERROR calling Wallet Service: {}", e.getMessage());
+      return DebitResponse.builder().status("FAILED").build();
     }
+  }
 }

@@ -26,27 +26,27 @@ import java.time.LocalDateTime;
 @Builder
 public class PaymentJpaEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "transaction_id", nullable = false, unique = true)
-    private String transactionId;
+  @Column(name = "transaction_id", nullable = false, unique = true)
+  private String transactionId;
 
-    @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal amount;
+  @Column(nullable = false, precision = 19, scale = 4)
+  private BigDecimal amount;
 
-    @Column(nullable = false, length = 3)
-    private String currency;
+  @Column(nullable = false, length = 3)
+  private String currency;
 
-    @Column(nullable = false, length = 32)
-    private String state;
+  @Column(nullable = false, length = 32)
+  private String state;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+  @CreationTimestamp
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+  @UpdateTimestamp
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

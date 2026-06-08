@@ -45,7 +45,7 @@ paths:
   /api/payments/{id}/fee:
     get:
       tags:
-        - Payments
+        - Fees
       summary: Get payment fee
       operationId: getPaymentFee
       parameters:

@@ -12,9 +12,9 @@ import java.util.Optional;
 @Repository
 public interface SpringDataPaymentRepository extends JpaRepository<PaymentJpaEntity, Long> {
 
-    Optional<PaymentJpaEntity> findByTransactionId(String transactionId);
+  Optional<PaymentJpaEntity> findByTransactionId(String transactionId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM PaymentJpaEntity p WHERE p.id = :id")
-    Optional<PaymentJpaEntity> findByIdWithLock(@Param("id") Long id);
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT p FROM PaymentJpaEntity p WHERE p.id = :id")
+  Optional<PaymentJpaEntity> findByIdWithLock(@Param("id") Long id);
 }

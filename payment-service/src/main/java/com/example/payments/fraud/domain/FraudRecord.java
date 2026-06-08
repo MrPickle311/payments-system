@@ -16,12 +16,12 @@ import java.time.LocalDateTime;
 @org.jmolecules.ddd.annotation.Entity
 public class FraudRecord {
 
-    private Long id;
-    private Long paymentId;
-    private Integer score;
-    private String riskLevel;
-    private String recommendation;
-    private LocalDateTime createdAt;
+  private Long id;
+  private Long paymentId;
+  private Integer score;
+  private String riskLevel;
+  private String recommendation;
+  private LocalDateTime createdAt;
 }
 
 

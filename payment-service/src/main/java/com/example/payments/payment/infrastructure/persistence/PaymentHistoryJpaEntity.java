@@ -24,23 +24,23 @@ import java.time.LocalDateTime;
 @Builder
 public class PaymentHistoryJpaEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "payment_id", nullable = false)
-    private Long paymentId;
+  @Column(name = "payment_id", nullable = false)
+  private Long paymentId;
 
-    @Column(name = "from_state", length = 32)
-    private String fromState;
+  @Column(name = "from_state", length = 32)
+  private String fromState;
 
-    @Column(name = "to_state", nullable = false, length = 32)
-    private String toState;
+  @Column(name = "to_state", nullable = false, length = 32)
+  private String toState;
 
-    @Column(nullable = false, length = 32)
-    private String event;
+  @Column(nullable = false, length = 32)
+  private String event;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime timestamp;
+  @CreationTimestamp
+  @Column(nullable = false, updatable = false)
+  private LocalDateTime timestamp;
 }

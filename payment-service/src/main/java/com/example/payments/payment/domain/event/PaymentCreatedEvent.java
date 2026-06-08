@@ -1,6 +1,6 @@
 package com.example.payments.payment.domain.event;
 
-import com.example.payments.common.domain.Money;
+import com.example.payments.payment.domain.Money;
 import org.jmolecules.event.annotation.DomainEvent;
 
 @DomainEvent

@@ -8,5 +8,5 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "wallet.service")
 public class WalletProperties {
-    private String url;
+  private String url;
 }

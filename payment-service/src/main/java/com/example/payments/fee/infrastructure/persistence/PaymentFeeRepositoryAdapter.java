@@ -11,19 +11,20 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PaymentFeeRepositoryAdapter implements PaymentFeeRepository {
 
-    private final SpringDataPaymentFeeRepository springDataRepository;
-    private final PaymentFeeEntityMapper mapper;
+  private final SpringDataPaymentFeeRepository springDataRepository;
+  private final PaymentFeeEntityMapper mapper;
 
-    @Override
-    public PaymentFee save(PaymentFee domain) {
-        PaymentFeeJpaEntity entity = mapper.toEntity(domain);
-        PaymentFeeJpaEntity savedEntity = springDataRepository.save(entity);
-        return mapper.toDomain(savedEntity);
-    }
+  @Override
+  public PaymentFee save(PaymentFee domain) {
+    PaymentFeeJpaEntity entity = mapper.toEntity(domain);
+    PaymentFeeJpaEntity savedEntity = springDataRepository.save(entity);
+    return mapper.toDomain(savedEntity);
+  }
 
-    @Override
-    public Optional<PaymentFee> findByPaymentId(Long paymentId) {
-        return springDataRepository.findByPaymentId(paymentId)
-                .map(mapper::toDomain);
-    }
+  @Override
+  public Optional<PaymentFee> findByPaymentId(Long paymentId) {
+    return springDataRepository.findByPaymentId(paymentId)
+
+        .map(mapper::toDomain);
+  }
 }

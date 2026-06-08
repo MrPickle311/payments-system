@@ -1,8 +1,11 @@
 package com.example.payments.payment.api;
 
-import com.example.payments.payment.api.model.Payment;
-import com.example.payments.payment.api.model.PaymentFee;
-import com.example.payments.payment.api.model.PaymentHistory;
+import com.example.payments.payment.api.model.ApiPayment;
+import com.example.payments.payment.api.model.ApiPaymentHistory;
+
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentHistory;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
@@ -13,16 +16,14 @@ import java.time.ZoneOffset;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PaymentMapper {
 
-    Payment toApi(com.example.payments.payment.domain.Payment domain);
+  ApiPayment toApi(Payment domain);
 
-    PaymentFee toApi(com.example.payments.fee.domain.PaymentFee domain);
+  ApiPaymentHistory toApi(PaymentHistory domain);
 
-    PaymentHistory toApi(com.example.payments.payment.domain.PaymentHistory domain);
-
-    default OffsetDateTime map(LocalDateTime time) {
-        if (time == null) {
-            return null;
-        }
-        return time.atOffset(ZoneOffset.UTC);
+  default OffsetDateTime map(LocalDateTime time) {
+    if (time == null) {
+      return null;
     }
+    return time.atOffset(ZoneOffset.UTC);
+  }
 }

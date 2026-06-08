@@ -4,5 +4,5 @@ import org.jmolecules.event.annotation.DomainEvent;
 
 @DomainEvent
 public interface PaymentDomainEvent {
-    Long getPaymentId();
+  Long getPaymentId();
 }

@@ -1,8 +1,8 @@
 package com.example.payments.payment.infrastructure.config;
 
 import com.example.payments.payment.domain.Payment;
-import com.example.payments.common.domain.enums.PaymentEvent;
-import com.example.payments.common.domain.enums.PaymentState;
+import com.example.payments.payment.domain.enums.PaymentEvent;
+import com.example.payments.payment.domain.enums.PaymentState;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineContext;
 import org.springframework.statemachine.persist.StateMachinePersister;
@@ -14,64 +14,66 @@ import static com.example.payments.payment.domain.PaymentConstants.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * Custom {@link StateMachinePersister} that maps between a {@link Payment}
- * entity (the canonical state store) and the in-memory state machine.
- */
+
 @Component
+@Slf4j
 public class PaymentStateMachinePersister
-        implements StateMachinePersister<PaymentState, PaymentEvent, Payment> {
+    implements StateMachinePersister<PaymentState, PaymentEvent, Payment> {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentStateMachinePersister.class);
 
-    @Override
-    public void persist(StateMachine<PaymentState, PaymentEvent> stateMachine,
-                        Payment payment) {
-        String stateStr = stateMachine.getState().getIds().stream()
-                .map(Enum::name)
-                .collect(Collectors.joining(","));
-        log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
-        payment.setState(stateStr);
+
+  @Override
+  public void persist(StateMachine<PaymentState, PaymentEvent> stateMachine, Payment payment) {
+    String stateStr = stateMachine.getState().getIds().stream()
+
+        .map(Enum::name)
+
+        .collect(Collectors.joining(","));
+    log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
+    payment.setState(stateStr);
+  }
+
+  @Override
+  public StateMachine<PaymentState, PaymentEvent> restore(
+      StateMachine<PaymentState, PaymentEvent> stateMachine, Payment payment) {
+
+    String[] stateNames = payment.getState().split(",");
+    PaymentState storedState = PaymentState.valueOf(stateNames[0]);
+    log.debug("[Persister] Restoring state machine to state {} for payment {}", payment.getState(),
+        payment.getId());
+
+    DefaultExtendedState extendedState = new DefaultExtendedState();
+    extendedState.getVariables().put(PAYMENT_ID, payment.getId());
+    extendedState.getVariables().put(PAYMENT_AMOUNT, payment.getMoney().amount());
+    extendedState.getVariables().put(PAYMENT_CURRENCY, payment.getMoney().currency());
+    extendedState.getVariables().put(PAYMENT_CREATED_AT, payment.getCreatedAt());
+    extendedState.getVariables().put(IS_RESTORING, Boolean.TRUE);
+
+    StateMachineContext<PaymentState, PaymentEvent> context;
+    if (stateNames.length > 1) {
+      List<StateMachineContext<PaymentState, PaymentEvent>> childs =
+          Arrays.stream(stateNames).skip(1)
+
+              .map(name -> new DefaultStateMachineContext<PaymentState, PaymentEvent>(
+                  PaymentState.valueOf(name), null, null, null))
+
+              .collect(Collectors.toList());
+      context = new DefaultStateMachineContext<>(childs, storedState, null, null, extendedState);
+    } else {
+      context = new DefaultStateMachineContext<>(storedState, null, null, extendedState);
     }
 
-    @Override
-    public StateMachine<PaymentState, PaymentEvent> restore(
-            StateMachine<PaymentState, PaymentEvent> stateMachine,
-            Payment payment) {
+    stateMachine.stop();
 
-        String[] stateNames = payment.getState().split(",");
-        PaymentState storedState = PaymentState.valueOf(stateNames[0]);
-        log.debug("[Persister] Restoring state machine to state {} for payment {}",
-                payment.getState(), payment.getId());
+    stateMachine.getStateMachineAccessor()
+        .doWithAllRegions(access -> access.resetStateMachine(context));
 
-        DefaultExtendedState extendedState = new DefaultExtendedState();
-        extendedState.getVariables().put(PAYMENT_ID,       payment.getId());
-        extendedState.getVariables().put(PAYMENT_AMOUNT,   payment.getMoney().getAmount());
-        extendedState.getVariables().put(PAYMENT_CURRENCY, payment.getMoney().getCurrency());
-        extendedState.getVariables().put(PAYMENT_CREATED_AT, payment.getCreatedAt());
-        extendedState.getVariables().put(IS_RESTORING,     Boolean.TRUE);
+    stateMachine.start();
 
-        StateMachineContext<PaymentState, PaymentEvent> context;
-        if (stateNames.length > 1) {
-            List<StateMachineContext<PaymentState, PaymentEvent>> childs = Arrays.stream(stateNames)
-                    .skip(1)
-                    .map(name -> new DefaultStateMachineContext<PaymentState, PaymentEvent>(PaymentState.valueOf(name), null, null, null))
-                    .collect(Collectors.toList());
-            context = new DefaultStateMachineContext<>(childs, storedState, null, null, extendedState);
-        } else {
-            context = new DefaultStateMachineContext<>(storedState, null, null, extendedState);
-        }
+    stateMachine.getExtendedState().getVariables().put(IS_RESTORING, Boolean.FALSE);
 
-        stateMachine.stop();
-
-        stateMachine.getStateMachineAccessor()
-                .doWithAllRegions(access -> access.resetStateMachine(context));
-
-        stateMachine.start();
-
-        stateMachine.getExtendedState().getVariables().put(IS_RESTORING, Boolean.FALSE);
-
-        return stateMachine;
-    }
+    return stateMachine;
+  }
 }

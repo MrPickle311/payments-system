@@ -1,8 +1,9 @@
 package com.example.payments.fee.domain;
 
-import com.example.payments.common.domain.Money;
+import com.example.payments.payment.domain.Money;
+import org.jmolecules.ddd.annotation.ValueObject;
 
-@org.jmolecules.ddd.annotation.ValueObject
+@ValueObject
 public record FeeBreakdown(
     Money grossAmount,
     Money percentageFee,
