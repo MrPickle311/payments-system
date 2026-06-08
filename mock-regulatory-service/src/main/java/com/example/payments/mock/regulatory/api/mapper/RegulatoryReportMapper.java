@@ -9,5 +9,5 @@ import static org.mapstruct.MappingConstants.ComponentModel.SPRING;
 @Mapper(componentModel = SPRING)
 public interface RegulatoryReportMapper {
 
-    RegulatoryReportDto mapRequest(RegulatoryReportRequest request);
+  RegulatoryReportDto mapRequest(RegulatoryReportRequest request);
 }

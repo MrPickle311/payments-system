@@ -61,8 +61,7 @@ class RegulatoryControllerTest {
     RegulatoryReportDto dto = new RegulatoryReportDto();
 
     when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
-    when(regulatoryService.processReport(dto))
-        .thenThrow(new IllegalStateException(CHAOS));
+    when(regulatoryService.processReport(dto)).thenThrow(new IllegalStateException(CHAOS));
 
     mockMvc
         .perform(post(REGULATORY_PATH + REPORT_PATH).contentType(MediaType.APPLICATION_JSON)
