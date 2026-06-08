@@ -3,7 +3,7 @@ package com.example.payments.wallet.application;
 import com.example.payments.common.dto.DebitRequest;
 import com.example.payments.common.dto.DebitResponse;
 import com.example.payments.wallet.domain.WalletAccount;
-import com.example.payments.wallet.infrastructure.persistence.WalletAccountRepository;
+import com.example.payments.wallet.application.port.WalletAccountPort;
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +22,9 @@ import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 @RequiredArgsConstructor
 public class WalletService {
 
-  public static final long ID = 1L;
-  public static final BigDecimal MOCK_BALANCE = new BigDecimal("1000.00");
-  private final WalletAccountRepository walletAccountRepository;
+  public static final long DEFAULT_USER_IDENTIFIER = 1L;
+  public static final BigDecimal DEFAULT_MOCK_BALANCE = new BigDecimal("1000.00");
+  private final WalletAccountPort walletAccountPort;
 
   @Transactional
   @Observed(name = "debit-wallet")
@@ -39,14 +39,14 @@ public class WalletService {
   }
 
   private WalletAccount getOrCreateAccount(String currency) {
-    return walletAccountRepository.findByUserIdAndCurrency(ID, currency)
+    return walletAccountPort.findByUserIdAndCurrency(DEFAULT_USER_IDENTIFIER, currency)
         .orElseGet(() -> createMockAccount(currency));
   }
 
   private WalletAccount createMockAccount(String currency) {
-    WalletAccount newAccount =
-        WalletAccount.builder().id(ID).userId(ID).balance(MOCK_BALANCE).currency(currency).build();
-    return walletAccountRepository.save(newAccount);
+    WalletAccount newAccount = WalletAccount.builder().id(DEFAULT_USER_IDENTIFIER)
+        .userId(DEFAULT_USER_IDENTIFIER).balance(DEFAULT_MOCK_BALANCE).currency(currency).build();
+    return walletAccountPort.save(newAccount);
   }
 
   private boolean hasInsufficientFunds(WalletAccount account, BigDecimal amount) {
@@ -61,7 +61,7 @@ public class WalletService {
 
   private DebitResponse processSuccessfulDebit(WalletAccount account, DebitRequest request) {
     account.setBalance(account.getBalance().subtract(request.getAmount()));
-    walletAccountRepository.save(account);
+    walletAccountPort.save(account);
     log.info("[WalletService] Debit successful for paymentId={} new balance={}",
         request.getPaymentId(), account.getBalance());
     return DebitResponse.builder().status(STATUS_SUCCESS)

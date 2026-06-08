@@ -1,9 +1,9 @@
 package com.example.payments.wallet.common;
 
-import lombok.experimental.UtilityClass;
 
-@UtilityClass
 public final class WalletConstants {
+
+  private WalletConstants() {}
 
   public static final String WALLET_PATH = "/wallets";
   public static final String DEBIT_PATH = "/debit";
