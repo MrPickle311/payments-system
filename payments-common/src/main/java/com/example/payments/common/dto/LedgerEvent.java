@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LedgerEvent {
-    private Long paymentId;
-    private BigDecimal grossAmount;
-    private BigDecimal netAmount;
-    private String currency;
-    private LocalDateTime timestamp;
+  private Long paymentId;
+  private BigDecimal grossAmount;
+  private BigDecimal netAmount;
+  private String currency;
+  private LocalDateTime timestamp;
 }
