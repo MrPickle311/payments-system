@@ -14,7 +14,8 @@ public interface PaymentEntityMapper {
   @Mapping(target = "currency", source = "money.currency")
   PaymentJpaEntity toEntity(Payment domain);
 
-  @Mapping(target = "money", expression = "java(Money.of(entity.getAmount(), entity.getCurrency()))")
+  @Mapping(target = "money",
+      expression = "java(Money.of(entity.getAmount(), entity.getCurrency()))")
   @Mapping(target = "domainEvents", ignore = true)
   Payment toDomain(PaymentJpaEntity entity);
 }
