@@ -4,7 +4,7 @@ import static com.example.payments.mock.regulatory.common.RegulatoryConstants.AC
 import static com.example.payments.mock.regulatory.common.RegulatoryConstants.CHAOS_RESPONSE;
 import static com.example.payments.mock.regulatory.common.RegulatoryConstants.DUPLICATE_RESPONSE;
 
-import com.example.payments.mock.regulatory.api.RegulatoryReportRequest;
+import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
 import com.example.payments.mock.regulatory.config.RegulatoryProperties;
 import java.security.SecureRandom;
 import java.util.HashSet;
@@ -22,7 +22,7 @@ public class RegulatoryService {
   private final Set<String> seenReportIds = new HashSet<>();
   private final RegulatoryProperties regulatoryProperties;
 
-  public String processReport(RegulatoryReportRequest request) {
+  public String processReport(RegulatoryReportDto request) {
     if (isDuplicate(request.getReportId())) {
       return handleDuplicate(request.getReportId());
     }

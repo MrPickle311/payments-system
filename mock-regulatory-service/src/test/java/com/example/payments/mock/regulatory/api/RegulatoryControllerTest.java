@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.payments.mock.regulatory.application.RegulatoryService;
+import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class RegulatoryControllerTest {
     RegulatoryReportRequest request =
         RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
 
-    when(regulatoryService.processReport(any(RegulatoryReportRequest.class))).thenReturn(ACCEPTED);
+    when(regulatoryService.processReport(any(RegulatoryReportDto.class))).thenReturn(ACCEPTED);
 
     mockMvc
         .perform(post(REGULATORY_PATH + REPORT_PATH).contentType(MediaType.APPLICATION_JSON)
@@ -52,7 +53,7 @@ class RegulatoryControllerTest {
     RegulatoryReportRequest request =
         RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
 
-    when(regulatoryService.processReport(any(RegulatoryReportRequest.class)))
+    when(regulatoryService.processReport(any(RegulatoryReportDto.class)))
         .thenThrow(new IllegalStateException(CHAOS));
 
     mockMvc

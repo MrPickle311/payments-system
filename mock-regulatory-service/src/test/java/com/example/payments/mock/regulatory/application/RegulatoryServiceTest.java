@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-import com.example.payments.mock.regulatory.api.RegulatoryReportRequest;
+import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
 import com.example.payments.mock.regulatory.config.RegulatoryProperties;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,12 +26,12 @@ class RegulatoryServiceTest {
   @InjectMocks
   private RegulatoryService service;
 
-  private RegulatoryReportRequest request;
+  private RegulatoryReportDto request;
 
   @BeforeEach
   void setUp() {
-    request = RegulatoryReportRequest.builder().reportId("report-123")
-        .payments(List.of(RegulatoryReportRequest.ExportedPayment.builder().build())).build();
+    request = RegulatoryReportDto.builder().reportId("report-123")
+        .payments(List.of(RegulatoryReportDto.ExportedPaymentDto.builder().build())).build();
   }
 
   @Test
