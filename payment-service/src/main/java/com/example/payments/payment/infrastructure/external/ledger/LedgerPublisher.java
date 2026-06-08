@@ -18,20 +18,14 @@ public class LedgerPublisher {
   private final KafkaTemplate<String, String> kafkaTemplate;
 
   public void publishEvent(Long paymentId, BigDecimal gross, BigDecimal net, String currency) {
-    log.info(
-        "[PaymentService -> LedgerPublisher] Publishing ledger event to Kafka for paymentId={}",
-        paymentId);
-
-    String topic = "payment-ledger-events";
+    log.info("[LedgerPublisher] Publishing ledger event for paymentId={}", paymentId);
     String event = String.format(
         "{\"paymentId\":%d,\"grossAmount\":%s,\"netAmount\":%s,\"currency\":\"%s\",\"timestamp\":\"%s\"}",
         paymentId, gross, net, currency, LocalDateTime.now());
-
     try {
-      kafkaTemplate.send(topic, String.valueOf(paymentId), event);
+      kafkaTemplate.send("payment-ledger-events", String.valueOf(paymentId), event);
     } catch (Exception e) {
-      log.error("[LedgerPublisher] Failed to send Kafka message (no broker available?): {}",
-          e.getMessage());
+      log.error("[LedgerPublisher] Failed to send Kafka message: {}", e.getMessage());
     }
   }
 }

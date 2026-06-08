@@ -1,6 +1,12 @@
 package com.example.payments.payment.application;
 
-import com.example.payments.payment.domain.*;
+import com.example.payments.payment.domain.Money;
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentHistory;
+import com.example.payments.payment.domain.PaymentNotFoundException;
+import com.example.payments.payment.domain.PaymentRepository;
+import com.example.payments.payment.domain.PaymentHistoryRepository;
+import com.example.payments.payment.domain.InvalidTransitionException;
 import reactor.core.publisher.Mono;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
@@ -15,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.statemachine.ExtendedState;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
-import org.springframework.statemachine.access.StateMachineAccessor;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.statemachine.state.State;
 import reactor.core.publisher.Flux;
@@ -26,6 +31,9 @@ import java.util.Optional;
 
 import static com.example.payments.payment.domain.PaymentConstants.FRAUD_RISK;
 import static com.example.payments.payment.domain.PaymentConstants.FRAUD_SCORE;
+import static com.example.payments.payment.domain.enums.PaymentEvent.AUTHORIZE;
+import static com.example.payments.payment.domain.enums.PaymentState.AUTHORIZED;
+import static com.example.payments.payment.domain.enums.PaymentState.NEW;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.statemachine.StateMachineEventResult.ResultType.ACCEPTED;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
@@ -77,7 +86,7 @@ class PaymentServiceTest {
 
   private Payment createPayment() {
     return Payment.builder().id(1L).transactionId(TX1).money(Money.of(new BigDecimal(HUNDRED), USD))
-        .state(PaymentState.NEW.name()).build();
+        .state(NEW.name()).build();
   }
 
   @Test
@@ -121,16 +130,15 @@ class PaymentServiceTest {
   void testProcessEventPaymentNotFound() {
     when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.empty());
 
-    assertThrows(PaymentNotFoundException.class,
-        () -> paymentService.processEvent(1L, PaymentEvent.AUTHORIZE));
+    assertThrows(PaymentNotFoundException.class, () -> paymentService.processEvent(1L, AUTHORIZE));
   }
 
   @Test
   void testProcessEventFraudGuardBlocked() {
-    Payment payment = Payment.builder().id(1L).state(PaymentState.NEW.name()).build();
+    Payment payment = Payment.builder().id(1L).state(NEW.name()).build();
     when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(payment));
 
-    StateMachine<PaymentState, PaymentEvent> sm = setupBlockedMachine(PaymentState.NEW);
+    StateMachine<PaymentState, PaymentEvent> sm = setupBlockedMachine(NEW);
 
     ExtendedState extendedState = mock(ExtendedState.class);
     when(sm.getExtendedState()).thenReturn(extendedState);
@@ -138,33 +146,32 @@ class PaymentServiceTest {
     when(extendedState.get(FRAUD_RISK, String.class)).thenReturn("HIGH");
 
     assertThrows(InvalidTransitionException.class,
-        () -> paymentService.processEvent(1L, PaymentEvent.AUTHORIZE));
+        () -> paymentService.processEvent(1L, AUTHORIZE));
   }
 
   private StateMachine<PaymentState, PaymentEvent> setupBlockedMachine(PaymentState mockState) {
     StateMachine<PaymentState, PaymentEvent> sm = mock(StateMachine.class);
     State<PaymentState, PaymentEvent> state = mock(State.class);
     when(stateMachineFactory.getStateMachine(anyString())).thenReturn(sm);
-    when(sm.getStateMachineAccessor()).thenReturn(mock(StateMachineAccessor.class));
     when(sm.getState()).thenReturn(state);
     when(state.getIds()).thenReturn(List.of(mockState));
     when(state.getId()).thenReturn(mockState);
     StateMachineEventResult<PaymentState, PaymentEvent> result =
         mock(StateMachineEventResult.class);
-    when(result.getResultType()).thenReturn(StateMachineEventResult.ResultType.ACCEPTED);
+    when(result.getResultType()).thenReturn(ACCEPTED);
     when(sm.sendEvent(any(Mono.class))).thenReturn(Flux.just(result));
     return sm;
   }
 
   @Test
   void testProcessEventSuccess() {
-    Payment payment = Payment.builder().id(1L).state(PaymentState.NEW.name()).build();
+    Payment payment = Payment.builder().id(1L).state(NEW.name()).build();
     when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(payment));
 
     setupSuccessMachine();
     when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
-    Payment processed = paymentService.processEvent(1L, PaymentEvent.AUTHORIZE);
+    Payment processed = paymentService.processEvent(1L, AUTHORIZE);
     assertNotNull(processed);
     verify(paymentRepository).save(any(Payment.class));
   }
@@ -174,14 +181,13 @@ class PaymentServiceTest {
     State<PaymentState, PaymentEvent> stateBefore = mock(State.class);
     State<PaymentState, PaymentEvent> stateAfter = mock(State.class);
     when(stateMachineFactory.getStateMachine(anyString())).thenReturn(sm);
-    when(sm.getStateMachineAccessor()).thenReturn(mock(StateMachineAccessor.class));
     when(sm.getState()).thenReturn(stateBefore, stateAfter);
-    when(stateBefore.getIds()).thenReturn(List.of(PaymentState.NEW));
-    when(stateAfter.getIds()).thenReturn(List.of(PaymentState.AUTHORIZED));
-    when(stateAfter.getId()).thenReturn(PaymentState.AUTHORIZED);
+    when(stateBefore.getIds()).thenReturn(List.of(NEW));
+    when(stateAfter.getIds()).thenReturn(List.of(AUTHORIZED));
+    when(stateAfter.getId()).thenReturn(AUTHORIZED);
     StateMachineEventResult<PaymentState, PaymentEvent> result =
         mock(StateMachineEventResult.class);
-    when(result.getResultType()).thenReturn(StateMachineEventResult.ResultType.ACCEPTED);
+    when(result.getResultType()).thenReturn(ACCEPTED);
     when(sm.sendEvent(any(Mono.class))).thenReturn(Flux.just(result));
   }
 }

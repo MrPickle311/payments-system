@@ -1,6 +1,11 @@
 package com.example.payments.payment.infrastructure.config;
 
-import com.example.payments.payment.domain.*;
+
+import com.example.payments.payment.domain.InvalidTransitionException;
+import com.example.payments.payment.domain.Money;
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentHistoryRepository;
+import com.example.payments.payment.domain.PaymentRepository;
 import com.example.payments.payment.infrastructure.external.ledger.LedgerPublisher;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -59,18 +64,29 @@ class GeneratedStateMachineConfigTest {
 
   @BeforeEach
   void setUp() {
+    initServices();
+    initMockResponses();
+    initRepositories();
+    initPaymentService();
+  }
+
+  private void initServices() {
     fraudCheckService = mock(FraudCheckPort.class);
     feeCalculationService = mock(FeeCalculationPort.class);
     walletClient = mock(WalletClient.class);
     ledgerPublisher = mock(LedgerPublisher.class);
+  }
 
+  private void initMockResponses() {
     when(fraudCheckService.evaluate(anyLong(), any(Money.class)))
         .thenReturn(new FraudCheckPort.FraudResult(10, LOW_STR, ALLOW_STR));
 
     when(feeCalculationService.calculate(any(Money.class)))
         .thenReturn(new FeeBreakdown(Money.of(HUNDRED, USD_STR), Money.of("2.9000", USD_STR),
             Money.of("0.30", USD_STR), Money.of("3.2000", USD_STR), Money.of("96.8000", USD_STR)));
+  }
 
+  private void initRepositories() {
     paymentRepository = mock(PaymentRepository.class);
     paymentHistoryRepository = mock(PaymentHistoryRepository.class);
 
@@ -80,7 +96,9 @@ class GeneratedStateMachineConfigTest {
 
     when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(testPayment));
     when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+  }
 
+  private void initPaymentService() {
     StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory =
         mock(StateMachineFactory.class);
     when(stateMachineFactory.getStateMachine(anyString())).thenAnswer(i -> {
@@ -167,17 +185,10 @@ class GeneratedStateMachineConfigTest {
     void failedRejectsAllEvents() {
       paymentService.processEvent(1L, PaymentEvent.INITIATE);
       paymentService.processEvent(1L, PaymentEvent.FAIL);
-      assertThrows(InvalidTransitionException.class,
-          () -> paymentService.processEvent(1L, PaymentEvent.INITIATE));
-      assertThrows(InvalidTransitionException.class,
-          () -> paymentService.processEvent(1L, PaymentEvent.AUTHORIZE));
-      assertThrows(InvalidTransitionException.class,
-          () -> paymentService.processEvent(1L, PaymentEvent.COMPLETE));
-      assertThrows(InvalidTransitionException.class,
-          () -> paymentService.processEvent(1L, PaymentEvent.CANCEL));
-      assertThrows(InvalidTransitionException.class,
-          () -> paymentService.processEvent(1L, PaymentEvent.REFUND));
-
+      List.of(PaymentEvent.INITIATE, PaymentEvent.AUTHORIZE, PaymentEvent.COMPLETE,
+          PaymentEvent.CANCEL, PaymentEvent.REFUND)
+          .forEach(e -> assertThrows(InvalidTransitionException.class,
+              () -> paymentService.processEvent(1L, e)));
       assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
     }
   }

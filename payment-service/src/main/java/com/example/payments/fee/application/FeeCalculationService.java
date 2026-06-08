@@ -44,13 +44,15 @@ public class FeeCalculationService implements FeeCalculationPort {
         PERCENTAGE_RATE.multiply(HUNDRED).stripTrailingZeros().toPlainString(), FLAT_FEE,
         breakdown.netAmount().amount(), grossAmount.currency());
 
-    PaymentFee fee =
-        PaymentFee.builder().paymentId(paymentId).grossAmount(breakdown.grossAmount().amount())
-            .percentageFee(breakdown.percentageFee().amount()).flatFee(breakdown.flatFee().amount())
-            .totalFee(breakdown.totalFee().amount()).netAmount(breakdown.netAmount().amount())
-            .currency(grossAmount.currency()).build();
-
+    PaymentFee fee = createPaymentFee(paymentId, grossAmount, breakdown);
     paymentFeeRepository.save(fee);
+  }
+
+  private PaymentFee createPaymentFee(Long paymentId, Money grossAmount, FeeBreakdown breakdown) {
+    return PaymentFee.builder().paymentId(paymentId).grossAmount(breakdown.grossAmount().amount())
+        .percentageFee(breakdown.percentageFee().amount()).flatFee(breakdown.flatFee().amount())
+        .totalFee(breakdown.totalFee().amount()).netAmount(breakdown.netAmount().amount())
+        .currency(grossAmount.currency()).build();
   }
 
   @Observed(name = "get-fee")

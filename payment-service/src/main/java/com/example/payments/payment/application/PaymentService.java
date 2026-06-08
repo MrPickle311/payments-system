@@ -1,37 +1,38 @@
 package com.example.payments.payment.application;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.example.payments.payment.application.dto.CreatePaymentRequest;
-import com.example.payments.payment.domain.Payment;
-import com.example.payments.payment.domain.PaymentHistory;
-import com.example.payments.payment.domain.PaymentRepository;
-import com.example.payments.payment.domain.PaymentHistoryRepository;
 import com.example.payments.payment.domain.InvalidTransitionException;
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentConstants;
+import com.example.payments.payment.domain.PaymentHistory;
+import com.example.payments.payment.domain.PaymentHistoryRepository;
 import com.example.payments.payment.domain.PaymentNotFoundException;
+import com.example.payments.payment.domain.PaymentRepository;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachineInterceptor;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachinePersister;
 import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.stereotype.Service;
-
-import static com.example.payments.payment.domain.enums.PaymentEvent.*;
-import static com.example.payments.payment.domain.PaymentConstants.*;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.Collection;
-
+import static com.example.payments.payment.domain.PaymentConstants.FRAUD_RISK;
+import static com.example.payments.payment.domain.PaymentConstants.FRAUD_SCORE;
+import static com.example.payments.payment.domain.enums.PaymentEvent.AUTHORIZE;
+import static com.example.payments.payment.domain.enums.PaymentEvent.FAIL;
+import static com.example.payments.payment.domain.enums.PaymentEvent.REDIRECT;
 
 @Service
 @RequiredArgsConstructor
@@ -53,9 +54,9 @@ public class PaymentService {
     payment.registerCreationEvent();
     payment = paymentRepository.save(payment);
 
-    paymentHistoryRepository
-        .save(PaymentHistory.builder().paymentId(payment.getId()).fromState(INITIAL_FROM_STATE)
-            .toState(PaymentState.NEW.name()).event(EVENT_CREATED).build());
+    paymentHistoryRepository.save(PaymentHistory.builder().paymentId(payment.getId())
+        .fromState(PaymentConstants.INITIAL_FROM_STATE).toState(PaymentState.NEW.name())
+        .event(PaymentConstants.EVENT_CREATED).build());
 
     log.info("[Service] Created payment id={} transactionId={}", payment.getId(),
         payment.getTransactionId());
@@ -67,49 +68,43 @@ public class PaymentService {
   public Payment processEvent(@SpanTag("payment.id") Long paymentId, PaymentEvent event) {
     Payment payment = paymentRepository.findByIdWithLock(paymentId)
         .orElseThrow(() -> new PaymentNotFoundException(paymentId));
-
     log.info("[Service] Processing event={} for payment={} (currentState={})", event, paymentId,
         payment.getState());
-
-    StateMachine<PaymentState, PaymentEvent> stateMachine =
+    StateMachine<PaymentState, PaymentEvent> sm =
         stateMachineFactory.getStateMachine(UUID.randomUUID().toString());
-
     try {
-      configureStateMachine(stateMachine, payment);
-
-      Collection<PaymentState> stateBeforeIds = stateMachine.getState().getIds();
-      PaymentState rootStateBefore = payment.currentState();
-
-      List<StateMachineEventResult<PaymentState, PaymentEvent>> results =
-          sendEventToStateMachine(stateMachine, event);
-
-      verifyTransitionAllowed(results, event, payment);
-
-      Collection<PaymentState> stateAfterIds = stateMachine.getState().getIds();
-      PaymentState rootStateAfter = stateMachine.getState().getId();
-
-      GuardCheckContext context =
-          GuardCheckContext.builder().stateMachine(stateMachine).payment(payment).event(event)
-              .stateBeforeIds(stateBeforeIds).stateAfterIds(stateAfterIds).build();
-
-      handleBlockedGuards(context);
-
-      stateMachinePersister.persist(stateMachine, payment);
-      payment.publishStateChange(rootStateBefore, rootStateAfter);
-
+      configureStateMachine(sm, payment);
+      processStateMachineEvent(sm, payment, event);
     } finally {
-      stateMachine.stop();
+      sm.stop();
     }
+    return savePayment(paymentId, payment);
+  }
 
+  private @NonNull Payment savePayment(Long paymentId, Payment payment) {
     Payment saved = paymentRepository.save(payment);
     log.info("[Service] Payment {} transitioned to state {}", paymentId, saved.getState());
     return saved;
   }
 
+  private void processStateMachineEvent(StateMachine<PaymentState, PaymentEvent> sm,
+      Payment payment, PaymentEvent event) {
+    Collection<PaymentState> before = sm.getState().getIds();
+    PaymentState rootBefore = payment.currentState();
+    verifyTransitionAllowed(sendEventToStateMachine(sm, event), event, payment);
+    Collection<PaymentState> after = sm.getState().getIds();
+    PaymentState rootAfter = sm.getState().getId();
+
+    handleBlockedGuards(GuardCheckContext.builder().stateMachine(sm).payment(payment).event(event)
+        .stateBeforeIds(before).stateAfterIds(after).build());
+
+    stateMachinePersister.persist(sm, payment);
+    payment.publishStateChange(rootBefore, rootAfter);
+  }
+
   private void configureStateMachine(StateMachine<PaymentState, PaymentEvent> stateMachine,
       Payment payment) {
-    stateMachine.getStateMachineAccessor()
-        .doWithAllRegions(access -> access.addStateMachineInterceptor(stateMachineInterceptor));
+    stateMachine.addStateListener(stateMachineInterceptor);
     stateMachinePersister.restore(stateMachine, payment);
   }
 

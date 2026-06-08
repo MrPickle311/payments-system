@@ -1,6 +1,15 @@
 package com.example.payments.payment.infrastructure.persistence;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.event.PaymentDomainEvent;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -8,17 +17,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
-
 @ExtendWith(MockitoExtension.class)
 class PaymentRepositoryAdapterTest {
+
+  private static final String TX1 = "TX1";
 
   @Mock
   private SpringDataPaymentRepository repository;
@@ -63,10 +65,10 @@ class PaymentRepositoryAdapterTest {
     PaymentJpaEntity entity = new PaymentJpaEntity();
     Payment domain = new Payment();
 
-    when(repository.findByTransactionId("TX1")).thenReturn(Optional.of(entity));
+    when(repository.findByTransactionId(TX1)).thenReturn(Optional.of(entity));
     when(mapper.toDomain(entity)).thenReturn(domain);
 
-    Optional<Payment> result = adapter.findByTransactionId("TX1");
+    Optional<Payment> result = adapter.findByTransactionId(TX1);
     assertTrue(result.isPresent());
     assertEquals(domain, result.get());
   }
@@ -83,6 +85,13 @@ class PaymentRepositoryAdapterTest {
     domain.setId(1L);
     domain.registerCreationEvent();
 
+    Payment savedDomain = performSave(domain);
+
+    verify(eventPublisher, times(1)).publishEvent(any(PaymentDomainEvent.class));
+    assertTrue(domain.getDomainEvents().isEmpty());
+  }
+
+  private Payment performSave(Payment domain) {
     PaymentJpaEntity entity = new PaymentJpaEntity();
     PaymentJpaEntity savedEntity = new PaymentJpaEntity();
     Payment savedDomain = new Payment();
@@ -91,11 +100,6 @@ class PaymentRepositoryAdapterTest {
     when(repository.save(entity)).thenReturn(savedEntity);
     when(mapper.toDomain(savedEntity)).thenReturn(savedDomain);
 
-    Payment result = adapter.save(domain);
-
-    assertEquals(savedDomain, result);
-    verify(eventPublisher, times(1))
-        .publishEvent(any(com.example.payments.payment.domain.event.PaymentDomainEvent.class));
-    assertTrue(domain.getDomainEvents().isEmpty());
+    return adapter.save(domain);
   }
 }

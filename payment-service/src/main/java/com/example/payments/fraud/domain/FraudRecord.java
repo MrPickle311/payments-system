@@ -1,19 +1,19 @@
 package com.example.payments.fraud.domain;
 
-import lombok.Getter;
-import lombok.ToString;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.jmolecules.ddd.annotation.Entity;
 
 @ToString
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@org.jmolecules.ddd.annotation.Entity
+@Entity
 public class FraudRecord {
 
   private Long id;

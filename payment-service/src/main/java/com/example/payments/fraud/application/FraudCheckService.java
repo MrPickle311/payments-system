@@ -48,22 +48,21 @@ public class FraudCheckService implements FraudCheckPort {
   public FraudResult evaluate(@SpanTag("payment.id") Long paymentId, Money money) {
     log.info("[FraudAPI] → Sending check request | payment={} amount={} {}", paymentId,
         money.amount(), money.currency());
-
     simulateNetworkLatency();
-
     int score = computeScore(money.amount());
     String riskLevel = getRiskLevel(score);
     String recommendation =
         score >= HIGH_RISK_THRESHOLD ? BLOCK_RECOMMENDATION : ALLOW_RECOMMENDATION;
-
     log.info("[FraudAPI] ← Response received | payment={} score={} risk={} recommendation={}",
         paymentId, score, riskLevel, recommendation);
+    saveFraudRecord(paymentId, score, riskLevel, recommendation);
+    return new FraudResult(score, riskLevel, recommendation);
+  }
 
+  private void saveFraudRecord(Long paymentId, int score, String riskLevel, String recommendation) {
     FraudRecord fraudRecord = FraudRecord.builder().paymentId(paymentId).score(score)
         .riskLevel(riskLevel).recommendation(recommendation).build();
     fraudRecordRepository.save(fraudRecord);
-
-    return new FraudResult(score, riskLevel, recommendation);
   }
 
   private static String getRiskLevel(int score) {
