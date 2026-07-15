@@ -27,6 +27,8 @@ import org.springframework.statemachine.guard.Guard;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +41,12 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   private static final String UNKNOWN_ERROR = "unknown";
   private static final int DAYS_30 = 30;
   private static final String STATUS_SUCCESS = "SUCCESS";
+  private static final String RISK_MEDIUM = "MEDIUM";
+  private static final String RISK_PENDING_REVIEW = "PENDING_REVIEW";
+  private static final String RISK_MANUAL_REVIEW = "MANUAL_REVIEW";
+  private static final String RISK_LOW = "LOW";
+  private static final String RISK_OK = "OK";
+  private static final String RISK_HIGH = "HIGH";
 
   private final FraudCheckPort fraudCheckService;
   private final FeeCalculationPort feeCalculationService;
@@ -46,59 +54,73 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   private final LedgerPublisher ledgerPublisher;
 
   @Override
-  protected Guard<PaymentState, PaymentEvent> fraudCheckGuard() {
+  protected Guard<PaymentState, PaymentEvent> requireReviewGuard() {
     return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      FraudResult result = evaluateFraud(context, paymentId);
-      if (result.isHighRisk()) {
-        log.warn("[Guard:Fraud] BLOCKED payment={} score={} risk={}", paymentId, result.score(),
-            result.riskLevel());
-        return false;
-      }
-      log.info("[Guard:Fraud] ALLOWED payment={} score={} risk={}", paymentId, result.score(),
-          result.riskLevel());
-      return true;
+      String riskLevel = context.getExtendedState().get(FRAUD_RISK, String.class);
+      return RISK_MEDIUM.equalsIgnoreCase(riskLevel)
+          || RISK_PENDING_REVIEW.equalsIgnoreCase(riskLevel)
+          || RISK_MANUAL_REVIEW.equalsIgnoreCase(riskLevel);
     };
   }
 
-  private FraudResult evaluateFraud(StateContext<PaymentState, PaymentEvent> context,
-      Long paymentId) {
-    Money money = Money.of(context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class),
-        context.getExtendedState().get(PAYMENT_CURRENCY, String.class));
-    FraudResult result = fraudCheckService.evaluate(paymentId, money);
-    context.getExtendedState().getVariables().put(FRAUD_SCORE, result.score());
-    context.getExtendedState().getVariables().put(FRAUD_RISK, result.riskLevel());
-    return result;
+  @Override
+  protected Guard<PaymentState, PaymentEvent> riskCheckGuard() {
+    return context -> {
+      String riskLevel = context.getExtendedState().get(FRAUD_RISK, String.class);
+      return RISK_LOW.equalsIgnoreCase(riskLevel) || STATUS_SUCCESS.equalsIgnoreCase(riskLevel)
+          || RISK_OK.equalsIgnoreCase(riskLevel);
+    };
+  }
+
+  @Override
+  protected Guard<PaymentState, PaymentEvent> riskRejectedGuard() {
+    return context -> {
+      String riskLevel = context.getExtendedState().get(FRAUD_RISK, String.class);
+      return RISK_HIGH.equalsIgnoreCase(riskLevel);
+    };
   }
 
   @Override
   protected Guard<PaymentState, PaymentEvent> refundWindowGuard() {
     return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
       LocalDateTime createdAt =
           context.getExtendedState().get(PAYMENT_CREATED_AT, LocalDateTime.class);
-      if (createdAt == null)
+      if (createdAt == null) {
         return true;
-      boolean inWindow = createdAt.isAfter(LocalDateTime.now().minusDays(DAYS_30));
-      if (!inWindow)
-        log.warn("[Guard:Refund] BLOCKED payment={} outside 30-day window", paymentId);
-      else
-        log.info("[Guard:Refund] ALLOWED payment={} inside refund window", paymentId);
-      return inWindow;
+      }
+      return createdAt.isAfter(LocalDateTime.now(ZoneId.systemDefault()).minusDays(DAYS_30));
     };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> evaluateRiskAction() {
+    return context -> {
+      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      FraudResult result = fraudCheckService.evaluate(paymentId, Money.of(amount, curr));
+      context.getExtendedState().getVariables().put(FRAUD_SCORE, result.score());
+      context.getExtendedState().getVariables().put(FRAUD_RISK, result.riskLevel());
+    };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> evaluateRiskErrorAction() {
+    return context -> log.error("[Action:EvaluateRisk] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
   }
 
   @Override
   protected Action<PaymentState, PaymentEvent> feeCalculationAction() {
     return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
       BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      FeeBreakdown breakdown = feeCalculationService.calculate(
-          Money.of(amount, context.getExtendedState().get(PAYMENT_CURRENCY, String.class)));
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, curr));
       context.getExtendedState().getVariables().put(PROCESSING_FEE, breakdown.totalFee().amount());
       context.getExtendedState().getVariables().put(NET_AMOUNT, breakdown.netAmount().amount());
-      log.info("[Action:FeeCalc] payment={} gross={} fee={} net={}", paymentId, amount,
-          breakdown.totalFee().amount(), breakdown.netAmount().amount());
+      walletClient.debit(pId, amount, curr);
     };
   }
 
@@ -110,18 +132,83 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   }
 
   @Override
-  protected Action<PaymentState, PaymentEvent> settlementAction() {
+  protected Action<PaymentState, PaymentEvent> reserveFeeAction() {
     return context -> {
       Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      walletClient.debit(paymentId, fee, curr);
+    };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> reserveFeeErrorAction() {
+    return context -> log.error("[Action:ReserveFee] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> postLedgerAction() {
+    return context -> {
+      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+      BigDecimal gross = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+      BigDecimal net = context.getExtendedState().get(NET_AMOUNT, BigDecimal.class);
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      ledgerPublisher.publishEvent(pId, gross, net, curr);
+    };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> postLedgerErrorAction() {
+    return context -> log.error("[Action:PostLedger] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> unreserveBaseAmountAction() {
+    return context -> {
+      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
       BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      Money money = Money.of(amount, currency);
-      BigDecimal net = feeCalculationService.calculate(money).netAmount().amount();
-      feeCalculationService.saveSettlement(paymentId, money);
-      walletClient.debit(paymentId, net, currency);
-      ledgerPublisher.publishEvent(paymentId, amount, net, currency);
-      log.info("[Action:Settlement] POST /accounting | payment={} net={} {}", paymentId, net,
-          currency);
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      walletClient.debit(pId, amount.negate(), curr);
+    };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> unreserveBaseAmountErrorAction() {
+    return context -> log.error("[Action:UnreserveBase] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> compensateSagaAction() {
+    return context -> {
+      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+      BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
+      String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      walletClient.debit(paymentId, fee.negate(), currency);
+      walletClient.debit(paymentId, amount.negate(), currency);
+    };
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> compensateSagaErrorAction() {
+    return context -> log.error("[Action:CompensateSaga] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> settlementAction() {
+    return context -> {
+      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+      feeCalculationService.saveSettlement(pId, Money.of(amount, curr));
       simulateInternalApiCall(50);
     };
   }
