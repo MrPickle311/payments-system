@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -29,6 +30,11 @@ public class PaymentRepositoryAdapter implements PaymentRepository {
   @Override
   public Optional<Payment> findByTransactionId(String transactionId) {
     return repository.findByTransactionId(transactionId).map(mapper::toDomain);
+  }
+
+  @Override
+  public List<Payment> findByState(String state) {
+    return repository.findByState(state).stream().map(mapper::toDomain).toList();
   }
 
   @Override
