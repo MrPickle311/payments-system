@@ -15,11 +15,11 @@ import lombok.AllArgsConstructor;
 import lombok.Setter;
 import org.jmolecules.ddd.annotation.AggregateRoot;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 
 @ToString
 @Getter
@@ -38,15 +38,20 @@ public class Payment {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
 
+  private Integer fraudScore;
+  private String fraudRisk;
+  private BigDecimal processingFee;
+  private BigDecimal netAmount;
+
   @Getter(AccessLevel.NONE)
   @Setter(AccessLevel.NONE)
   @Builder.Default
   private final List<PaymentDomainEvent> domainEvents = new ArrayList<>();
 
-
   public PaymentState currentState() {
-    if (this.state == null)
+    if (this.state == null) {
       return null;
+    }
     String rootStateName = this.state.split(",")[0];
     return PaymentState.valueOf(rootStateName);
   }

@@ -1,14 +1,19 @@
 package com.example.payments.payment.infrastructure.config;
 
+import static com.example.payments.payment.domain.PaymentConstants.FRAUD_RISK;
+import static com.example.payments.payment.domain.PaymentConstants.FRAUD_SCORE;
 import static com.example.payments.payment.domain.PaymentConstants.IS_RESTORING;
+import static com.example.payments.payment.domain.PaymentConstants.NET_AMOUNT;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_AMOUNT;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CREATED_AT;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_ID;
+import static com.example.payments.payment.domain.PaymentConstants.PROCESSING_FEE;
 
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +38,10 @@ public class PaymentStateMachinePersister
         .collect(Collectors.joining(COMMA));
     log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
     payment.setState(stateStr);
+    payment.setFraudScore(stateMachine.getExtendedState().get(FRAUD_SCORE, Integer.class));
+    payment.setFraudRisk(stateMachine.getExtendedState().get(FRAUD_RISK, String.class));
+    payment.setProcessingFee(stateMachine.getExtendedState().get(PROCESSING_FEE, BigDecimal.class));
+    payment.setNetAmount(stateMachine.getExtendedState().get(NET_AMOUNT, BigDecimal.class));
   }
 
   @Override
@@ -56,9 +65,27 @@ public class PaymentStateMachinePersister
     extendedState.getVariables().put(PAYMENT_ID, payment.getId());
     extendedState.getVariables().put(PAYMENT_AMOUNT, payment.getMoney().amount());
     extendedState.getVariables().put(PAYMENT_CURRENCY, payment.getMoney().currency());
-    extendedState.getVariables().put(PAYMENT_CREATED_AT, payment.getCreatedAt());
+    if (payment.getCreatedAt() != null) {
+      extendedState.getVariables().put(PAYMENT_CREATED_AT, payment.getCreatedAt());
+    }
     extendedState.getVariables().put(IS_RESTORING, Boolean.TRUE);
+    putSagaVariables(extendedState, payment);
     return extendedState;
+  }
+
+  private void putSagaVariables(DefaultExtendedState extendedState, Payment payment) {
+    if (payment.getFraudScore() != null) {
+      extendedState.getVariables().put(FRAUD_SCORE, payment.getFraudScore());
+    }
+    if (payment.getFraudRisk() != null) {
+      extendedState.getVariables().put(FRAUD_RISK, payment.getFraudRisk());
+    }
+    if (payment.getProcessingFee() != null) {
+      extendedState.getVariables().put(PROCESSING_FEE, payment.getProcessingFee());
+    }
+    if (payment.getNetAmount() != null) {
+      extendedState.getVariables().put(NET_AMOUNT, payment.getNetAmount());
+    }
   }
 
   private StateMachineContext<PaymentState, PaymentEvent> createContext(String[] stateNames,

@@ -21,7 +21,6 @@ import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CURRE
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payments.payment.domain.PaymentConstants.PROCESSING_FEE;
 
-import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.action.Action;
 import org.springframework.statemachine.config.EnableStateMachineFactory;
 import org.springframework.statemachine.guard.Guard;
@@ -39,6 +38,7 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   private static final String UNKNOWN_ERROR = "unknown";
   private static final int DAYS_30 = 30;
+  private static final String STATUS_SUCCESS = "SUCCESS";
 
   private final FraudCheckPort fraudCheckService;
   private final FeeCalculationPort feeCalculationService;
@@ -136,8 +136,9 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   @Override
   protected Action<PaymentState, PaymentEvent> completedEntryAction() {
     return context -> {
-      if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class)))
+      if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class))) {
         return;
+      }
       log.info("[Entry:Completed] Payment {} captured!",
           context.getExtendedState().get(PAYMENT_ID, Long.class));
     };
@@ -146,8 +147,7 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   private void simulateInternalApiCall(long millis) {
     try {
       Thread.sleep(millis);
-    } catch (InterruptedException e) {
-      log.warn("Internal API simulation interrupted", e);
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
     }
   }

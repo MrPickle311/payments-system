@@ -42,6 +42,18 @@ public class PaymentJpaEntity {
   @Column(nullable = false, length = 255)
   private String state;
 
+  @Column(name = "fraud_score")
+  private Integer fraudScore;
+
+  @Column(name = "fraud_risk", length = 50)
+  private String fraudRisk;
+
+  @Column(name = "fee_amount", precision = 19, scale = 4)
+  private BigDecimal processingFee;
+
+  @Column(name = "net_amount", precision = 19, scale = 4)
+  private BigDecimal netAmount;
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;

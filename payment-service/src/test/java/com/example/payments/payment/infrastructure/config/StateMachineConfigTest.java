@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 
 import static com.example.payments.payment.domain.PaymentConstants.IS_RESTORING;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CREATED_AT;
-import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_ID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
@@ -52,7 +51,6 @@ class StateMachineConfigTest {
     StateContext<PaymentState, PaymentEvent> context = mock(StateContext.class);
     ExtendedState extendedState = mock(ExtendedState.class);
     when(context.getExtendedState()).thenReturn(extendedState);
-    when(extendedState.get(PAYMENT_ID, Long.class)).thenReturn(1L);
     when(extendedState.get(PAYMENT_CREATED_AT, LocalDateTime.class))
         .thenReturn(LocalDateTime.now().minusDays(10));
     assertTrue(config.refundWindowGuard().evaluate(context));

@@ -4,47 +4,34 @@ skinparam state {
   BorderColor Black
 }
 
-title Payment State Machine with Orthogonal Regions
+title Payment Saga State Machine
 
 [*] --> NEW
 
-NEW --> PROCESSING : INITIATE
+NEW --> RISK_CHECKING : INITIATE\n/ evaluateRiskAction\n(err: evaluateRiskErrorAction)
 
-state PROCESSING {
-  state Authorization {
-    [*] --> AUTH_PENDING
+RISK_CHECKING --> MANUAL_REVIEW : RISK_EVALUATED\n[requireReviewGuard]
+RISK_CHECKING --> FUNDS_RESERVING : RISK_EVALUATED\n[riskCheckGuard]\n/ feeCalculationAction\n(err: feeCalculationErrorAction)
+RISK_CHECKING --> REJECTED : RISK_EVALUATED\n[riskRejectedGuard]
 
-    AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n[fraudCheckGuard]\n/ feeCalculationAction\n  (err: feeCalculationErrorAction)
-    AUTH_PENDING --> AUTH_REJECTED : AUTHORIZE\n[fraudCheckGuard → HIGH risk]
-  }
+MANUAL_REVIEW --> FUNDS_RESERVING : ANALYST_APPROVE\n/ feeCalculationAction\n(err: feeCalculationErrorAction)
+MANUAL_REVIEW --> REJECTED : ANALYST_REJECT
 
-  --
+FUNDS_RESERVING --> FEE_RESERVING : FUNDS_RESERVED\n/ reserveFeeAction\n(err: reserveFeeErrorAction)
+FUNDS_RESERVING --> FAILED : FUNDS_RESERVATION_FAILED
 
-  state FraudCheck {
-    [*] --> FRAUD_EVALUATING
-    FRAUD_EVALUATING --> FRAUD_PASSED  : FRAUD_CLEAR
-    FRAUD_EVALUATING --> FRAUD_DETECTED : FRAUD_ALERT
-  }
-}
+FEE_RESERVING --> ACCOUNTING_POSTING : FEE_RESERVED\n/ postLedgerAction\n(err: postLedgerErrorAction)
+FEE_RESERVING --> COMPENSATING : FEE_RESERVATION_FAILED\n/ unreserveBaseAmountAction\n(err: unreserveBaseAmountErrorAction)
 
-PROCESSING --> COMPLETED : COMPLETE\n/ settlementAction\n  (err: settlementErrorAction)
-note on link
-  **Guard:** AUTH_APPROVED
-  **AND** FRAUD_PASSED
-end note
+ACCOUNTING_POSTING --> COMPLETED : ENTRIES_POSTED\n/ settlementAction\n(err: settlementErrorAction)
+ACCOUNTING_POSTING --> COMPENSATING : POSTING_FAILED\n/ compensateSagaAction\n(err: compensateSagaErrorAction)
 
-PROCESSING --> FAILED : FAIL
-note on link
-  AUTH_REJECTED
-  **OR** FRAUD_DETECTED
-end note
-
-PROCESSING --> CANCELED : CANCEL
+COMPENSATING --> FAILED : COMPENSATION_COMPLETE
 
 state COMPLETED {
-  COMPLETED : entry / completedEntryAction\n  (skipped when isRestoring=true)
+  COMPLETED : entry / completedEntryAction
 }
 
-COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]\n(30-day window)
+COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]
 
 @enduml
