@@ -10,6 +10,15 @@ import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.payment.infrastructure.external.ledger.LedgerPublisher;
 import com.example.payments.payment.infrastructure.external.wallet.WalletClient;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.statemachine.StateContext;
+import com.example.payments.common.dto.DebitRequest.ReserveFundsCommand;
+import com.example.payments.common.dto.DebitRequest.UnreserveFundsCommand;
+import com.example.payments.common.dto.DebitRequest.PostJournalEntryCommand;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import static com.example.payments.payment.domain.PaymentConstants.FRAUD_RISK;
 import static com.example.payments.payment.domain.PaymentConstants.FRAUD_SCORE;
@@ -20,6 +29,7 @@ import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CREAT
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payments.payment.domain.PaymentConstants.PROCESSING_FEE;
+import static com.example.payments.payment.domain.PaymentConstants.REJECT_REASON;
 
 import org.springframework.statemachine.action.Action;
 import org.springframework.statemachine.config.EnableStateMachineFactory;
@@ -48,10 +58,19 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
   private static final String RISK_OK = "OK";
   private static final String RISK_HIGH = "HIGH";
 
+  private static final String CMD_RESERVE_FUNDS = "ReserveFundsCommand";
+  private static final String CMD_UNRESERVE_FUNDS = "UnreserveFundsCommand";
+  private static final String CMD_POST_JOURNAL = "PostJournalEntryCommand";
+  private static final String TYPE_BASE = "BASE";
+  private static final String TYPE_FEE = "FEE";
+  private static final String TOPIC_PAYMENT_EVENTS = "payment-events";
+
   private final FraudCheckPort fraudCheckService;
   private final FeeCalculationPort feeCalculationService;
   private final WalletClient walletClient;
   private final LedgerPublisher ledgerPublisher;
+  private final KafkaTemplate<String, String> kafkaTemplate;
+  private final ObjectMapper objectMapper;
 
   @Override
   protected Guard<PaymentState, PaymentEvent> requireReviewGuard() {
@@ -94,14 +113,19 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> evaluateRiskAction() {
-    return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      FraudResult result = fraudCheckService.evaluate(paymentId, Money.of(amount, curr));
-      context.getExtendedState().getVariables().put(FRAUD_SCORE, result.score());
-      context.getExtendedState().getVariables().put(FRAUD_RISK, result.riskLevel());
-    };
+    return this::executeEvaluateRisk;
+  }
+
+  private void executeEvaluateRisk(StateContext<PaymentState, PaymentEvent> context) {
+    Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+    FraudResult result = fraudCheckService.evaluate(paymentId, Money.of(amount, curr));
+    context.getExtendedState().getVariables().put(FRAUD_SCORE, result.score());
+    context.getExtendedState().getVariables().put(FRAUD_RISK, result.riskLevel());
+    if (result.recommendation() != null && !"ALLOW".equals(result.recommendation())) {
+      context.getExtendedState().getVariables().put(REJECT_REASON, result.recommendation());
+    }
   }
 
   @Override
@@ -113,15 +137,20 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> feeCalculationAction() {
-    return context -> {
-      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, curr));
-      context.getExtendedState().getVariables().put(PROCESSING_FEE, breakdown.totalFee().amount());
-      context.getExtendedState().getVariables().put(NET_AMOUNT, breakdown.netAmount().amount());
-      walletClient.debit(pId, amount, curr);
-    };
+    return this::executeFeeCalculation;
+  }
+
+  private void executeFeeCalculation(StateContext<PaymentState, PaymentEvent> context) {
+    Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+    FeeBreakdown breakdown = feeCalculationService.calculate(Money.of(amount, curr));
+    context.getExtendedState().getVariables().put(PROCESSING_FEE, breakdown.totalFee().amount());
+    context.getExtendedState().getVariables().put(NET_AMOUNT, breakdown.netAmount().amount());
+
+    ReserveFundsCommand cmd = ReserveFundsCommand.builder().paymentId(paymentId).walletId(1L)
+        .amount(amount).type(TYPE_BASE).currency(curr).build();
+    sendCommand(CMD_RESERVE_FUNDS, cmd);
   }
 
   @Override
@@ -133,12 +162,17 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> reserveFeeAction() {
-    return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      walletClient.debit(paymentId, fee, curr);
-    };
+    return this::executeReserveFee;
+  }
+
+  private void executeReserveFee(StateContext<PaymentState, PaymentEvent> context) {
+    Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+
+    ReserveFundsCommand cmd = ReserveFundsCommand.builder().paymentId(paymentId).walletId(1L)
+        .amount(fee).type(TYPE_FEE).currency(curr).build();
+    sendCommand(CMD_RESERVE_FUNDS, cmd);
   }
 
   @Override
@@ -150,13 +184,19 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> postLedgerAction() {
-    return context -> {
-      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal gross = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      BigDecimal net = context.getExtendedState().get(NET_AMOUNT, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      ledgerPublisher.publishEvent(pId, gross, net, curr);
-    };
+    return this::executePostLedger;
+  }
+
+  private void executePostLedger(StateContext<PaymentState, PaymentEvent> context) {
+    Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal gross = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    BigDecimal net = context.getExtendedState().get(NET_AMOUNT, BigDecimal.class);
+    BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+
+    PostJournalEntryCommand cmd = PostJournalEntryCommand.builder().paymentId(pId).payerWalletId(1L)
+        .payeeWalletId(2L).baseAmount(gross).feeAmount(fee).currency(curr).build();
+    sendCommand(CMD_POST_JOURNAL, cmd);
   }
 
   @Override
@@ -168,12 +208,17 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> unreserveBaseAmountAction() {
-    return context -> {
-      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      walletClient.debit(pId, amount.negate(), curr);
-    };
+    return this::executeUnreserveBase;
+  }
+
+  private void executeUnreserveBase(StateContext<PaymentState, PaymentEvent> context) {
+    Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+
+    UnreserveFundsCommand cmd = UnreserveFundsCommand.builder().paymentId(pId).walletId(1L)
+        .amount(amount).type(TYPE_BASE).currency(curr).build();
+    sendCommand(CMD_UNRESERVE_FUNDS, cmd);
   }
 
   @Override
@@ -185,14 +230,22 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> compensateSagaAction() {
-    return context -> {
-      Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
-      String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      walletClient.debit(paymentId, fee.negate(), currency);
-      walletClient.debit(paymentId, amount.negate(), currency);
-    };
+    return this::executeCompensateSaga;
+  }
+
+  private void executeCompensateSaga(StateContext<PaymentState, PaymentEvent> context) {
+    Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    BigDecimal fee = context.getExtendedState().get(PROCESSING_FEE, BigDecimal.class);
+    String currency = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+
+    UnreserveFundsCommand cmdBase = UnreserveFundsCommand.builder().paymentId(paymentId)
+        .walletId(1L).amount(amount).type(TYPE_BASE).currency(currency).build();
+    sendCommand(CMD_UNRESERVE_FUNDS, cmdBase);
+
+    UnreserveFundsCommand cmdFee = UnreserveFundsCommand.builder().paymentId(paymentId).walletId(1L)
+        .amount(fee).type(TYPE_FEE).currency(currency).build();
+    sendCommand(CMD_UNRESERVE_FUNDS, cmdFee);
   }
 
   @Override
@@ -202,15 +255,30 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
         context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
   }
 
+  private void sendCommand(String type, Object payload) {
+    try {
+      String json = objectMapper.writeValueAsString(payload);
+      ProducerRecord<String, String> producerRecord = new ProducerRecord<>(TOPIC_PAYMENT_EVENTS, null,
+          String.valueOf(payload.hashCode()), json);
+      producerRecord.headers().add("type", type.getBytes(StandardCharsets.UTF_8));
+      kafkaTemplate.send(producerRecord);
+      log.info("[StateMachineConfig] Sent command type={} payload={}", type, json);
+    } catch (Exception e) {
+      log.error("[StateMachineConfig] Failed to send command type={}: {}", type, e.getMessage());
+    }
+  }
+
   @Override
   protected Action<PaymentState, PaymentEvent> settlementAction() {
-    return context -> {
-      Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-      BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
-      String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
-      feeCalculationService.saveSettlement(pId, Money.of(amount, curr));
-      simulateInternalApiCall(50);
-    };
+    return this::executeSettlement;
+  }
+
+  private void executeSettlement(StateContext<PaymentState, PaymentEvent> context) {
+    Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+    feeCalculationService.saveSettlement(pId, Money.of(amount, curr));
+    simulateInternalApiCall(50);
   }
 
   @Override
@@ -222,13 +290,37 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
 
   @Override
   protected Action<PaymentState, PaymentEvent> completedEntryAction() {
-    return context -> {
-      if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class))) {
-        return;
-      }
-      log.info("[Entry:Completed] Payment {} captured!",
-          context.getExtendedState().get(PAYMENT_ID, Long.class));
-    };
+    return this::executeCompletedEntry;
+  }
+
+  private void executeCompletedEntry(StateContext<PaymentState, PaymentEvent> context) {
+    if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class))) {
+      return;
+    }
+    log.info("[Entry:Completed] Payment {} captured!",
+        context.getExtendedState().get(PAYMENT_ID, Long.class));
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> refundAction() {
+    return this::executeRefund;
+  }
+
+  private void executeRefund(StateContext<PaymentState, PaymentEvent> context) {
+    Long pId = context.getExtendedState().get(PAYMENT_ID, Long.class);
+    BigDecimal amount = context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    String curr = context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+    BigDecimal refundFee = new BigDecimal("2.00");
+    walletClient.debit(pId, 1L, amount.negate(), curr);
+    walletClient.debit(pId, 2L, amount.add(refundFee), curr);
+    ledgerPublisher.publishEvent(pId, amount.negate(), amount.add(refundFee).negate(), curr);
+  }
+
+  @Override
+  protected Action<PaymentState, PaymentEvent> refundErrorAction() {
+    return context -> log.error("[Action:Refund] ERROR for payment={}: {}",
+        context.getExtendedState().get(PAYMENT_ID, Long.class),
+        context.getException() != null ? context.getException().getMessage() : UNKNOWN_ERROR);
   }
 
   private void simulateInternalApiCall(long millis) {

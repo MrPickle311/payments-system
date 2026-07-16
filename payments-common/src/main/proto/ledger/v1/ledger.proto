@@ -11,6 +11,7 @@ message PostJournalEntryCommand {
   int64 payee_wallet_id = 3;
   double base_amount = 4;
   double fee_amount = 5;
+  string currency = 6;
 }
 
 message JournalEntryPostedEvent {

@@ -33,7 +33,7 @@ public class RegulatoryApiWriter implements ItemWriter<LedgerEvent> {
     RegulatoryReportRequest request = buildRequest(chunk);
     String url = exportProperties.getRegulatory().getUrl();
     log.info("Sending report {} to {}, chunks {}", request.getReportId(), url, chunk.size());
-    restTemplate.postForLocation(url, request);
+    executePostWithCircuitBreaker(url, request);
     log.info("Report id={} sent successfully", request.getReportId());
   }
 
@@ -59,6 +59,53 @@ public class RegulatoryApiWriter implements ItemWriter<LedgerEvent> {
     } catch (Exception e) {
       log.warn("MD5 failed, falling back");
       return FALLBACK_PREFIX + input.hashCode();
+    }
+  }
+
+  private static enum CircuitState { CLOSED, OPEN, HALF_OPEN }
+  private static CircuitState state = CircuitState.CLOSED;
+  private static int failureCount = 0;
+  private static long lastStateChange = 0L;
+  private static final int FAILURE_THRESHOLD = 3;
+  private static final long COOLDOWN_MS = 10000L;
+
+  private void executePostWithCircuitBreaker(String url, RegulatoryReportRequest request) {
+    checkCircuitState();
+    if (state == CircuitState.OPEN) {
+      log.error("[CircuitBreaker] Call rejected — circuit is OPEN.");
+      throw new RuntimeException("Circuit breaker is OPEN. Preventing call to regulatory API.");
+    }
+    try {
+      restTemplate.postForLocation(url, request);
+      onSuccess();
+    } catch (Exception e) {
+      onFailure(e);
+      throw e;
+    }
+  }
+
+  private void checkCircuitState() {
+    if (state == CircuitState.OPEN && System.currentTimeMillis() - lastStateChange > COOLDOWN_MS) {
+      state = CircuitState.HALF_OPEN;
+      log.info("[CircuitBreaker] Transitioning to HALF_OPEN after cooldown.");
+    }
+  }
+
+  private void onSuccess() {
+    if (state == CircuitState.HALF_OPEN) {
+      state = CircuitState.CLOSED;
+      failureCount = 0;
+      log.info("[CircuitBreaker] Call succeeded in HALF_OPEN. Closing circuit.");
+    }
+  }
+
+  private void onFailure(Exception e) {
+    failureCount++;
+    log.warn("[CircuitBreaker] Failure detected: {}", e.getMessage());
+    if (state == CircuitState.CLOSED && failureCount >= FAILURE_THRESHOLD) {
+      state = CircuitState.OPEN;
+      lastStateChange = System.currentTimeMillis();
+      log.error("[CircuitBreaker] Threshold reached. Opening circuit.");
     }
   }
 }

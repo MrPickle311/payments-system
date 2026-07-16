@@ -40,6 +40,10 @@ public class Payment {
 
   private Integer fraudScore;
   private String fraudRisk;
+  private String rejectReason;
+  private String sourceCurrency;
+  private BigDecimal sourceAmount;
+  private BigDecimal exchangeRate;
   private BigDecimal processingFee;
   private BigDecimal netAmount;
 

@@ -32,6 +32,6 @@ state COMPLETED {
   COMPLETED : entry / completedEntryAction
 }
 
-COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]
+COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]\n/ refundAction\n(err: refundErrorAction)
 
 @enduml

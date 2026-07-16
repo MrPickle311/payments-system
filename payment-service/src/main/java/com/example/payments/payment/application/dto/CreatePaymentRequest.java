@@ -5,9 +5,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
+@Setter
+@Getter
 public class CreatePaymentRequest {
 
   @NotBlank(message = "transactionId is required")
@@ -21,37 +25,16 @@ public class CreatePaymentRequest {
   @Size(min = 3, max = 3, message = "currency must be a 3-letter ISO 4217 code")
   private String currency;
 
+  private String sourceCurrency;
+
   public CreatePaymentRequest(String transactionId, BigDecimal amount, String currency) {
     this.transactionId = transactionId;
     this.amount = amount;
     this.currency = currency;
+    this.sourceCurrency = currency;
   }
 
-  public String getTransactionId() {
-    return transactionId;
-  }
-
-  public void setTransactionId(String transactionId) {
-    this.transactionId = transactionId;
-  }
-
-  public BigDecimal getAmount() {
-    return amount;
-  }
-
-  public void setAmount(BigDecimal amount) {
-    this.amount = amount;
-  }
-
-  public String getCurrency() {
-    return currency;
-  }
-
-  public void setCurrency(String currency) {
-    this.currency = currency;
-  }
-
-  public Money getMoney() {
+    public Money getMoney() {
     return Money.of(amount, currency);
   }
 }

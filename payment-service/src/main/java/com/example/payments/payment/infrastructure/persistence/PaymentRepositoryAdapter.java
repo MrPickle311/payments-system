@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,5 +55,10 @@ public class PaymentRepositoryAdapter implements PaymentRepository {
   @Override
   public boolean existsById(Long id) {
     return repository.existsById(id);
+  }
+
+  @Override
+  public BigDecimal getSumOfCompletedPaymentsSince(LocalDateTime since) {
+    return repository.sumAmountByStateAndCreatedAtAfter("COMPLETED", since);
   }
 }

@@ -21,10 +21,14 @@ public class WalletClient {
   private final RestTemplate restTemplate;
 
   public DebitResponse debit(Long paymentId, BigDecimal amount, String currency) {
-    log.info("[WalletClient] Calling Wallet Service: paymentId={} amount={} {}", paymentId, amount,
-        currency);
-    DebitRequest request =
-        DebitRequest.builder().paymentId(paymentId).amount(amount).currency(currency).build();
+    return debit(paymentId, 1L, amount, currency);
+  }
+
+  public DebitResponse debit(Long paymentId, Long walletId, BigDecimal amount, String currency) {
+    log.info("[WalletClient] Calling Wallet Service: paymentId={} walletId={} amount={} {}",
+        paymentId, walletId, amount, currency);
+    DebitRequest request = DebitRequest.builder().paymentId(paymentId).walletId(walletId)
+        .amount(amount).currency(currency).build();
     try {
       return restTemplate.postForObject(walletProperties.getUrl() + WALLET_DEBIT_PATH, request,
           DebitResponse.class);

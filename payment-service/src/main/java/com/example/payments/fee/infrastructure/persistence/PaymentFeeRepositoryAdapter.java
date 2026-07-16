@@ -5,6 +5,8 @@ import com.example.payments.fee.domain.PaymentFeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Component("paymentFeeRepositoryAdapter")
@@ -26,5 +28,10 @@ public class PaymentFeeRepositoryAdapter implements PaymentFeeRepository {
     return springDataRepository.findByPaymentId(paymentId)
 
         .map(mapper::toDomain);
+  }
+
+  @Override
+  public BigDecimal getSumOfFeesSince(LocalDateTime since) {
+    return springDataRepository.sumTotalFeeByCreatedAtAfter(since);
   }
 }

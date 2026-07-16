@@ -1,5 +1,6 @@
 package com.example.payments.payment.application;
 
+import com.example.payments.fx.FxDetails;
 import com.example.payments.sharedkernel.Money;
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentHistory;
@@ -10,7 +11,9 @@ import com.example.payments.payment.domain.InvalidTransitionException;
 import reactor.core.publisher.Mono;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
+import com.example.payments.fee.application.FeeCalculationService;
 import com.example.payments.payment.application.dto.CreatePaymentRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachineInterceptor;
 import com.example.payments.payment.infrastructure.config.PaymentStateMachinePersister;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,13 +60,19 @@ class PaymentServiceTest {
   private PaymentStateMachineInterceptor stateMachineInterceptor;
   @Mock
   private PaymentStateMachinePersister stateMachinePersister;
+  @Mock
+  private FeeCalculationService feeCalculationService;
 
   private PaymentService paymentService;
 
   @BeforeEach
   void setUp() {
+    ObjectMapper objectMapper = new ObjectMapper();
+    PaymentSagaOrchestrator sagaOrchestrator = new PaymentSagaOrchestrator(
+        paymentRepository, paymentHistoryRepository, stateMachineFactory,
+        stateMachineInterceptor, stateMachinePersister, objectMapper);
     paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
-        stateMachineFactory, stateMachineInterceptor, stateMachinePersister);
+        feeCalculationService, sagaOrchestrator);
   }
 
   private static final String TX1 = "tx1";
@@ -74,6 +83,8 @@ class PaymentServiceTest {
   void testCreatePayment() {
     CreatePaymentRequest request = new CreatePaymentRequest(TX1, new BigDecimal(HUNDRED), USD);
     Payment savedPayment = createPayment();
+    when(feeCalculationService.calculateFx(any(), any(), any()))
+        .thenReturn(new FxDetails(USD, new BigDecimal(HUNDRED), BigDecimal.ONE));
     when(paymentRepository.save(any(Payment.class))).thenReturn(savedPayment);
 
     Payment result = paymentService.createPayment(request);

@@ -9,6 +9,7 @@ import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CREAT
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payments.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payments.payment.domain.PaymentConstants.PROCESSING_FEE;
+import static com.example.payments.payment.domain.PaymentConstants.REJECT_REASON;
 
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.enums.PaymentEvent;
@@ -40,6 +41,7 @@ public class PaymentStateMachinePersister
     payment.setState(stateStr);
     payment.setFraudScore(stateMachine.getExtendedState().get(FRAUD_SCORE, Integer.class));
     payment.setFraudRisk(stateMachine.getExtendedState().get(FRAUD_RISK, String.class));
+    payment.setRejectReason(stateMachine.getExtendedState().get(REJECT_REASON, String.class));
     payment.setProcessingFee(stateMachine.getExtendedState().get(PROCESSING_FEE, BigDecimal.class));
     payment.setNetAmount(stateMachine.getExtendedState().get(NET_AMOUNT, BigDecimal.class));
   }
@@ -80,6 +82,13 @@ public class PaymentStateMachinePersister
     if (payment.getFraudRisk() != null) {
       extendedState.getVariables().put(FRAUD_RISK, payment.getFraudRisk());
     }
+    if (payment.getRejectReason() != null) {
+      extendedState.getVariables().put(REJECT_REASON, payment.getRejectReason());
+    }
+    restoreFeeVariables(extendedState, payment);
+  }
+
+  private void restoreFeeVariables(DefaultExtendedState extendedState, Payment payment) {
     if (payment.getProcessingFee() != null) {
       extendedState.getVariables().put(PROCESSING_FEE, payment.getProcessingFee());
     }

@@ -84,4 +84,26 @@ class PaymentStateMachineInterceptorTest {
     interceptor.stateContext(stateContext);
     verify(paymentHistoryRepository).save(any(PaymentHistory.class));
   }
+
+  @Test
+  void testStateContextRejectedWithReason() {
+    setupMockTransition(PaymentState.REJECTED);
+    java.util.Map<Object, Object> vars = new java.util.HashMap<>();
+    when(extendedState.getVariables()).thenReturn(vars);
+    when(stateContext.getEvent()).thenReturn(PaymentEvent.FAIL);
+    interceptor.stateContext(stateContext);
+    org.junit.jupiter.api.Assertions.assertEquals("FAIL", vars.get("rejectReason"));
+  }
+
+  private void setupMockTransition(PaymentState targetState) {
+    State<PaymentState, PaymentEvent> source = mock(State.class);
+    State<PaymentState, PaymentEvent> target = mock(State.class);
+    when(source.getId()).thenReturn(PaymentState.NEW);
+    when(target.getId()).thenReturn(targetState);
+    when(stateContext.getSource()).thenReturn(source);
+    when(stateContext.getTarget()).thenReturn(target);
+    when(stateContext.getExtendedState()).thenReturn(extendedState);
+    when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+    when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(false);
+  }
 }

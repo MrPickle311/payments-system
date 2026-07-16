@@ -114,6 +114,8 @@ components:
           type: number
         currency:
           type: string
+        sourceCurrency:
+          type: string
     Money:
       type: object
       properties:
@@ -133,6 +135,14 @@ components:
           $ref: '#/components/schemas/Money'
         state:
           type: string
+        rejectReason:
+          type: string
+        sourceCurrency:
+          type: string
+        sourceAmount:
+          type: number
+        exchangeRate:
+          type: number
         createdAt:
           type: string
           format: date-time

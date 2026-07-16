@@ -10,6 +10,7 @@ message ReserveFundsCommand {
   int64 wallet_id = 2;
   double amount = 3;
   string type = 4; // "BASE" or "FEE"
+  string currency = 5;
 }
 
 message FundsReservedEvent {
@@ -17,12 +18,14 @@ message FundsReservedEvent {
   int64 wallet_id = 2;
   double amount = 3;
   string type = 4;
+  string currency = 5;
 }
 
 message FundsReservationFailedEvent {
   int64 payment_id = 1;
   int64 wallet_id = 2;
   string reason = 3;
+  string currency = 4;
 }
 
 message UnreserveFundsCommand {
@@ -30,4 +33,5 @@ message UnreserveFundsCommand {
   int64 wallet_id = 2;
   double amount = 3;
   string type = 4;
+  string currency = 5;
 }

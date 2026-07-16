@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS payments (
     amount NUMERIC(19, 4) NOT NULL,
     currency TEXT NOT NULL CHECK (char_length(currency) = 3),
     state TEXT NOT NULL,
+    reject_reason TEXT,
+    source_currency TEXT,
+    source_amount NUMERIC(19, 4),
+    exchange_rate NUMERIC(19, 6),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ
 );
@@ -41,3 +45,9 @@ CREATE TABLE IF NOT EXISTS fraud_records (
 CREATE INDEX IF NOT EXISTS idx_payment_history_payment_id ON payment_history(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_fees_payment_id ON payment_fees(payment_id);
 CREATE INDEX IF NOT EXISTS idx_fraud_records_payment_id ON fraud_records(payment_id);
+
+CREATE TABLE IF NOT EXISTS payer_profiles (
+    payer_id BIGINT PRIMARY KEY,
+    segment TEXT NOT NULL,
+    kyc_status TEXT NOT NULL
+);

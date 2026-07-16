@@ -12,7 +12,11 @@ import com.example.payments.fee.application.FeeCalculationPort;
 import com.example.payments.fee.application.FeeCalculationPort.FeeBreakdown;
 import com.example.payments.fraud.application.FraudCheckPort;
 import com.example.payments.common.dto.DebitResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import com.example.payments.payment.application.PaymentService;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,11 +37,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.argThat;
 
 class GeneratedStateMachineConfigTest {
+  private static final String OBJ_MAPPER_FIELD = "objectMapper";
+  private static final String KAFKA_TEMPLATE_FIELD = "kafkaTemplate";
   private static final String LOW_STR = "LOW";
   private static final String ALLOW_STR = "ALLOW";
   private static final String HUNDRED = "100.00";
@@ -50,6 +54,7 @@ class GeneratedStateMachineConfigTest {
   private FeeCalculationPort feeCalculationService;
   private WalletClient walletClient;
   private LedgerPublisher ledgerPublisher;
+  private KafkaTemplate<String, String> kafkaTemplate;
   private PaymentService paymentService;
   private Payment testPayment;
   private PaymentRepository paymentRepository;
@@ -69,6 +74,7 @@ class GeneratedStateMachineConfigTest {
     feeCalculationService = mock(FeeCalculationPort.class);
     walletClient = mock(WalletClient.class);
     ledgerPublisher = mock(LedgerPublisher.class);
+    kafkaTemplate = mock(KafkaTemplate.class);
   }
 
   private void initMockResponses() {
@@ -96,34 +102,46 @@ class GeneratedStateMachineConfigTest {
   }
 
   private void initPaymentService() {
-    StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory =
-        mock(StateMachineFactory.class);
-    when(stateMachineFactory.getStateMachine(anyString())).thenAnswer(i -> {
-      lastStateMachine = buildStateMachine();
-      return lastStateMachine;
-    });
-
+    StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory = createMockFactory();
     PaymentStateMachineInterceptor interceptor =
         new PaymentStateMachineInterceptor(paymentHistoryRepository);
+    ReflectionTestUtils.setField(interceptor, OBJ_MAPPER_FIELD, new ObjectMapper());
+    ReflectionTestUtils.setField(interceptor, KAFKA_TEMPLATE_FIELD, kafkaTemplate);
     PaymentStateMachinePersister persister = new PaymentStateMachinePersister();
 
     paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
         stateMachineFactory, interceptor, persister);
+    ReflectionTestUtils.setField(paymentService, OBJ_MAPPER_FIELD, new ObjectMapper());
+  }
+
+  private StateMachineFactory<PaymentState, PaymentEvent> createMockFactory() {
+    StateMachineFactory<PaymentState, PaymentEvent> factory = mock(StateMachineFactory.class);
+    when(factory.getStateMachine(anyString())).thenAnswer(i -> {
+      lastStateMachine = buildStateMachine();
+      return lastStateMachine;
+    });
+    return factory;
   }
 
   private StateMachine<PaymentState, PaymentEvent> buildStateMachine() throws Exception {
     StateMachineConfig config = new StateMachineConfig(fraudCheckService, feeCalculationService,
         walletClient, ledgerPublisher);
+    ReflectionTestUtils.setField(config, OBJ_MAPPER_FIELD, new ObjectMapper());
+    ReflectionTestUtils.setField(config, KAFKA_TEMPLATE_FIELD, kafkaTemplate);
 
     StateMachineBuilder.Builder<PaymentState, PaymentEvent> builder = StateMachineBuilder.builder();
-
-    config.configure(builder.configureConfiguration());
-    config.configure(builder.configureStates());
-    config.configure(builder.configureTransitions());
+    configureBuilder(config, builder);
 
     StateMachine<PaymentState, PaymentEvent> sm = builder.build();
     sm.start();
     return sm;
+  }
+
+  private void configureBuilder(StateMachineConfig config,
+      StateMachineBuilder.Builder<PaymentState, PaymentEvent> builder) throws Exception {
+    config.configure(builder.configureConfiguration());
+    config.configure(builder.configureStates());
+    config.configure(builder.configureTransitions());
   }
 
   @Nested
@@ -243,8 +261,7 @@ class GeneratedStateMachineConfigTest {
       paymentService.processEvent(1L, PaymentEvent.FUNDS_RESERVED);
 
       paymentService.processEvent(1L, PaymentEvent.FEE_RESERVATION_FAILED);
-      verify(walletClient).debit(eq(1L), argThat(v -> v.compareTo(BigDecimal.ZERO) < 0),
-          anyString());
+      verify(kafkaTemplate, times(3)).send(any(ProducerRecord.class));
 
       paymentService.processEvent(1L, PaymentEvent.COMPENSATION_COMPLETE);
       assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
@@ -259,7 +276,7 @@ class GeneratedStateMachineConfigTest {
       paymentService.processEvent(1L, PaymentEvent.FEE_RESERVED);
 
       paymentService.processEvent(1L, PaymentEvent.POSTING_FAILED);
-      verify(walletClient, times(4)).debit(anyLong(), any(BigDecimal.class), anyString());
+      verify(kafkaTemplate, times(5)).send(any(ProducerRecord.class));
 
       paymentService.processEvent(1L, PaymentEvent.COMPENSATION_COMPLETE);
       assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);

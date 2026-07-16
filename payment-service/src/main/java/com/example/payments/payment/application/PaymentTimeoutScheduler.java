@@ -30,7 +30,8 @@ public class PaymentTimeoutScheduler {
 
   @Scheduled(fixedDelayString = "${payment.saga.timeout-check-interval-ms:5000}")
   public void checkPendingTimeouts() {
-    LocalDateTime threshold = LocalDateTime.now(ZoneId.systemDefault()).minusSeconds(timeoutSeconds);
+    LocalDateTime threshold =
+        LocalDateTime.now(ZoneId.systemDefault()).minusSeconds(timeoutSeconds);
     List<Payment> pending = paymentRepository.findByState(PaymentState.MANUAL_REVIEW.name());
     pending.forEach(payment -> processTimeoutIfExpired(payment, threshold));
   }

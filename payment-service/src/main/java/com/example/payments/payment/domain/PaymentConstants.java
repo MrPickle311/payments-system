@@ -16,4 +16,5 @@ public final class PaymentConstants {
   public static final String PROCESSING_FEE = "processingFee";
   public static final String NET_AMOUNT = "netAmount";
   public static final String PAYMENT_CREATED_AT = "paymentCreatedAt";
+  public static final String REJECT_REASON = "rejectReason";
 }

@@ -48,6 +48,18 @@ public class PaymentJpaEntity {
   @Column(name = "fraud_risk", length = 50)
   private String fraudRisk;
 
+  @Column(name = "reject_reason")
+  private String rejectReason;
+
+  @Column(name = "source_currency", length = 3)
+  private String sourceCurrency;
+
+  @Column(name = "source_amount", precision = 19, scale = 4)
+  private BigDecimal sourceAmount;
+
+  @Column(name = "exchange_rate", precision = 19, scale = 6)
+  private BigDecimal exchangeRate;
+
   @Column(name = "fee_amount", precision = 19, scale = 4)
   private BigDecimal processingFee;
 

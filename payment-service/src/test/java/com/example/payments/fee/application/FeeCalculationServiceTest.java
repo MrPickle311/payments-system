@@ -3,6 +3,8 @@ package com.example.payments.fee.application;
 import com.example.payments.fee.application.FeeCalculationPort.FeeBreakdown;
 import com.example.payments.fee.domain.PaymentFee;
 import com.example.payments.fee.domain.PaymentFeeRepository;
+import com.example.payments.payment.domain.Payment;
+import com.example.payments.payment.domain.PaymentRepository;
 import com.example.payments.sharedkernel.Money;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,12 +30,14 @@ class FeeCalculationServiceTest {
 
   @Mock
   private PaymentFeeRepository paymentFeeRepository;
+  @Mock
+  private PaymentRepository paymentRepository;
 
   private FeeCalculationService feeCalculationService;
 
   @BeforeEach
   void setUp() {
-    feeCalculationService = new FeeCalculationService(paymentFeeRepository);
+    feeCalculationService = new FeeCalculationService(paymentFeeRepository, paymentRepository);
   }
 
   private static final String USD = "USD";
@@ -100,5 +105,49 @@ class FeeCalculationServiceTest {
     RuntimeException ex =
         assertThrows(RuntimeException.class, () -> feeCalculationService.getFee(1L));
     assertTrue(ex.getMessage().contains("No fee record found"));
+  }
+
+  @Test
+  void testCalculateFxSameCurrency() {
+    var details = feeCalculationService.calculateFx(new BigDecimal("100.00"), "USD", "USD");
+    assertEquals("USD", details.sourceCurrency());
+    assertEquals(new BigDecimal("100.00"), details.sourceAmount());
+    assertEquals(BigDecimal.ONE, details.exchangeRate());
+  }
+
+  @Test
+  void testCalculateFxDifferentCurrency() {
+    var details = feeCalculationService.calculateFx(new BigDecimal("100.00"), "USD", "EUR");
+    assertEquals("USD", details.sourceCurrency());
+    assertEquals(new BigDecimal("111.1000"), details.sourceAmount());
+    assertEquals(new BigDecimal("1.111000"), details.exchangeRate());
+  }
+
+  @Test
+  void testCalculateFeeDegressive() {
+    Money gross = Money.of(new BigDecimal("2000.00"), USD);
+    FeeBreakdown breakdown = feeCalculationService.calculate(gross, null);
+    assertEquals(new BigDecimal("2000.00"), breakdown.grossAmount().amount());
+    assertEquals(new BigDecimal("30.0000"), breakdown.percentageFee().amount());
+    assertEquals(new BigDecimal("0.20"), breakdown.flatFee().amount());
+    assertEquals(new BigDecimal("30.2000"), breakdown.totalFee().amount());
+  }
+
+  @Test
+  void testCalculateFeeWaiver() {
+    Payment p = new Payment();
+    p.setTransactionId("vip_buyer_123");
+    when(paymentRepository.findById(10L)).thenReturn(Optional.of(p));
+    Money gross = Money.of(new BigDecimal("100.00"), USD);
+    FeeBreakdown breakdown = feeCalculationService.calculate(gross, 10L);
+    assertEquals(BigDecimal.ZERO, breakdown.totalFee().amount());
+  }
+
+  @Test
+  void testGenerateFeeReport() {
+    LocalDateTime since = LocalDateTime.now().minusDays(1);
+    when(paymentFeeRepository.getSumOfFeesSince(since)).thenReturn(new BigDecimal("150.00"));
+    BigDecimal total = feeCalculationService.generateFeeReport(since);
+    assertEquals(new BigDecimal("150.00"), total);
   }
 }
