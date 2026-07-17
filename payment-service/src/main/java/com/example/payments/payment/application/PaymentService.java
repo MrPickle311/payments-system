@@ -1,6 +1,7 @@
 package com.example.payments.payment.application;
 
 import com.example.payments.payment.application.dto.CreatePaymentRequest;
+import com.example.payments.payment.application.saga.ParallelSagaJoinInterceptor;
 import com.example.payments.payment.domain.InvalidTransitionException;
 import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentConstants;
@@ -44,6 +45,7 @@ public class PaymentService {
   private final StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory;
   private final PaymentStateMachineInterceptor stateMachineInterceptor;
   private final PaymentStateMachinePersister stateMachinePersister;
+  private final ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
 
   @Transactional
   @Observed(name = "create-payment")
@@ -76,7 +78,7 @@ public class PaymentService {
       configureStateMachine(sm, payment);
       processStateMachineEvent(sm, payment, event);
     } finally {
-      sm.stop();
+      sm.stopReactively().block();
     }
     return savePayment(paymentId, payment);
   }
@@ -105,13 +107,16 @@ public class PaymentService {
   private void configureStateMachine(StateMachine<PaymentState, PaymentEvent> stateMachine,
       Payment payment) {
     stateMachine.addStateListener(stateMachineInterceptor);
+    stateMachine.getStateMachineAccessor().doWithAllRegions(
+        accessor -> accessor.addStateMachineInterceptor(parallelSagaJoinInterceptor));
     stateMachinePersister.restore(stateMachine, payment);
   }
 
   private List<StateMachineEventResult<PaymentState, PaymentEvent>> sendEventToStateMachine(
-      StateMachine<PaymentState, PaymentEvent> stateMachine, PaymentEvent event) {
-    return stateMachine.sendEvent(Mono.just(MessageBuilder.withPayload(event).build()))
-        .collectList().block();
+      StateMachine<PaymentState, PaymentEvent> sm, PaymentEvent event) {
+    log.info("Sending event {} to state machine currently in state {}", event,
+        sm.getState().getId());
+    return sm.sendEvent(Mono.just(MessageBuilder.withPayload(event).build())).collectList().block();
   }
 
   private void verifyTransitionAllowed(

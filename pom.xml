@@ -43,6 +43,7 @@
         <maven-mapstruct-binding-plugin.version>0.2.0</maven-mapstruct-binding-plugin.version>
         <maven-compiler.version>3.13.0</maven-compiler.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
+        <grpc-spring-boot-starter.version>3.1.0.RELEASE</grpc-spring-boot-starter.version>
     </properties>
 
     <repositories>
@@ -134,6 +135,16 @@
                 <groupId>com.example</groupId>
                 <artifactId>payments-common</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-server-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot-starter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.devh</groupId>
+                <artifactId>grpc-client-spring-boot-starter</artifactId>
+                <version>${grpc-spring-boot-starter.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

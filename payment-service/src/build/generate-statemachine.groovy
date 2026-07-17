@@ -415,6 +415,8 @@ import org.springframework.statemachine.guard.Guard;
  */
 public abstract class ${className}
         extends StateMachineConfigurerAdapter<${stateEnumSimple}, ${eventEnumSimple}> {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(${className}.class);
 """
 
 // --- Abstract guard methods ---
@@ -432,12 +434,39 @@ if (!guardNames.isEmpty()) {
 // --- Abstract action methods ---
 if (!actionNames.isEmpty()) {
     sb << """    // =========================================================================
-    // Actions — implement in subclass
+    // Actions — implement in subclass (Standard blocking code)
     // =========================================================================
 
 """
     for (a in actionNames) {
-        sb << "    protected abstract Action<${stateEnumSimple}, ${eventEnumSimple}> ${a}();\n\n"
+        sb << "    protected abstract void execute${a.capitalize()}(org.springframework.statemachine.StateContext<${stateEnumSimple}, ${eventEnumSimple}> context) throws Exception;\n\n"
+    }
+
+    sb << """    // =========================================================================
+    // Reactive Wrappers (Auto-generated)
+    // =========================================================================
+
+    private final reactor.core.scheduler.Scheduler virtualThreadScheduler =
+            reactor.core.scheduler.Schedulers.fromExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+
+"""
+    for (a in actionNames) {
+        sb << """    protected org.springframework.statemachine.action.ReactiveAction<${stateEnumSimple}, ${eventEnumSimple}> ${a}() {
+        return context -> reactor.core.publisher.Mono.fromRunnable(() -> {
+            try {
+                execute${a.capitalize()}(context);
+            } catch (Exception e) {
+                if (e instanceof RuntimeException) throw (RuntimeException) e;
+                throw new RuntimeException(e);
+            }
+        })
+        .subscribeOn(virtualThreadScheduler)
+        .doOnError(e -> log.error("Unhandled exception in state machine action: ${a}", e))
+        .onErrorResume(e -> reactor.core.publisher.Mono.empty())
+        .then();
+    }
+
+"""
     }
 }
 
@@ -450,6 +479,7 @@ sb << """    // ================================================================
     public void configure(StateMachineConfigurationConfigurer<${stateEnumSimple}, ${eventEnumSimple}> config)
             throws Exception {
         config.withConfiguration()
+                .regionExecutionPolicy(org.springframework.statemachine.region.RegionExecutionPolicy.PARALLEL)
                 .autoStartup(false);
     }
 
@@ -470,9 +500,15 @@ sb << """    // ================================================================
 
 // Top-level states (excluding initial)
 for (s in topLevelStates) {
-    if (s == initialState) continue
+    if (s == initialState) {
+        if (entryActions.containsKey(s)) {
+            sb << "                .stateEntryFunction(${stateEnumSimple}.${s}, ${entryActions[s]}())\n"
+        }
+        continue
+    }
     if (entryActions.containsKey(s)) {
-        sb << "                .stateEntry(${stateEnumSimple}.${s}, ${entryActions[s]}())\n"
+        sb << "                .state(${stateEnumSimple}.${s})\n"
+        sb << "                .stateEntryFunction(${stateEnumSimple}.${s}, ${entryActions[s]}())\n"
     } else {
         sb << "                .state(${stateEnumSimple}.${s})\n"
     }
@@ -492,8 +528,18 @@ for (compEntry in compositeRegions) {
             sb << "                .initial(${stateEnumSimple}.${region.initialState})\n"
         }
         for (rs in region.states) {
-            if (rs == region.initialState) continue
-            sb << "                .state(${stateEnumSimple}.${rs})\n"
+            if (rs == region.initialState) {
+                if (entryActions.containsKey(rs)) {
+                    sb << "                .stateEntryFunction(${stateEnumSimple}.${rs}, ${entryActions[rs]}())\n"
+                }
+                continue
+            }
+            if (entryActions.containsKey(rs)) {
+                sb << "                .state(${stateEnumSimple}.${rs})\n"
+                sb << "                .stateEntryFunction(${stateEnumSimple}.${rs}, ${entryActions[rs]}())\n"
+            } else {
+                sb << "                .state(${stateEnumSimple}.${rs})\n"
+            }
         }
     }
 }
@@ -534,9 +580,9 @@ for (int t = 0; t < transitions.size(); t++) {
     }
     if (tr.action) {
         if (tr.errorAction) {
-            sb << "                .action(${tr.action}(), ${tr.errorAction}())\n"
+            sb << "                .actionFunction(ctx -> ${tr.action}().apply(ctx).onErrorResume(err -> ${tr.errorAction}().apply(ctx).then(reactor.core.publisher.Mono.error(err))))\n"
         } else {
-            sb << "                .action(${tr.action}())\n"
+            sb << "                .actionFunction(${tr.action}())\n"
         }
     }
 

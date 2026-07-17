@@ -2,6 +2,7 @@ package com.example.payments.payment.infrastructure.config;
 
 import com.example.payments.fee.application.FeeCalculationPort;
 import com.example.payments.fraud.application.FraudCheckPort;
+import com.example.payments.payment.application.saga.PaymentProcessingSaga;
 import com.example.payments.payment.domain.enums.PaymentEvent;
 import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.payment.infrastructure.external.ledger.LedgerPublisher;
@@ -39,12 +40,15 @@ class StateMachineConfigTest {
   @Mock
   private LedgerPublisher ledgerPublisher;
 
+  @Mock
+  private PaymentProcessingSaga paymentProcessingSaga;
+
   private StateMachineConfig config;
 
   @BeforeEach
   void setUp() {
-    config = new StateMachineConfig(fraudCheckService, feeCalculationService, walletClient,
-        ledgerPublisher);
+    config = new StateMachineConfig(feeCalculationService, walletClient, ledgerPublisher,
+        paymentProcessingSaga);
   }
 
   @Test
@@ -68,7 +72,7 @@ class StateMachineConfigTest {
     when(context.getExtendedState()).thenReturn(extendedState);
     when(extendedState.get(IS_RESTORING, Boolean.class)).thenReturn(true);
 
-    config.completedEntryAction().execute(context);
-    verify(feeCalculationService, never()).calculate(any());
+    config.completedEntryAction().apply(context).block();
+    verify(paymentProcessingSaga, never()).completedEntry(any());
   }
 }

@@ -7,12 +7,14 @@ import com.example.payments.payment.domain.Payment;
 import com.example.payments.payment.domain.PaymentHistoryRepository;
 import com.example.payments.payment.domain.PaymentRepository;
 import com.example.payments.payment.infrastructure.external.ledger.LedgerPublisher;
+
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.doAnswer;
 import java.util.List;
 import com.example.payments.payment.infrastructure.external.wallet.WalletClient;
 import com.example.payments.payment.domain.enums.PaymentEvent;
@@ -20,10 +22,13 @@ import com.example.payments.payment.domain.enums.PaymentState;
 import com.example.payments.fee.application.FeeCalculationPort;
 import com.example.payments.fee.application.FeeCalculationPort.FeeBreakdown;
 import com.example.payments.fraud.application.FraudCheckPort;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import com.example.payments.payment.application.saga.ParallelSagaJoinInterceptor;
+import com.example.payments.payment.application.saga.PaymentProcessingSaga;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.config.StateMachineFactory;
 import com.example.payments.payment.application.PaymentService;
@@ -32,9 +37,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.springframework.statemachine.config.StateMachineBuilder;
+import org.springframework.statemachine.StateContext;
+import reactor.core.publisher.Mono;
+import org.springframework.messaging.support.MessageBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -54,6 +63,8 @@ class GeneratedStateMachineConfigTest {
   private FraudCheckPort fraudCheckService;
   private FeeCalculationPort feeCalculationService;
   private WalletClient walletClient;
+  private ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
+  private PaymentProcessingSaga paymentProcessingSaga;
   private LedgerPublisher ledgerPublisher;
   private PaymentService paymentService;
   private Payment testPayment;
@@ -75,6 +86,21 @@ class GeneratedStateMachineConfigTest {
     feeCalculationService = mock(FeeCalculationPort.class);
     walletClient = mock(WalletClient.class);
     ledgerPublisher = mock(LedgerPublisher.class);
+    parallelSagaJoinInterceptor = mock(ParallelSagaJoinInterceptor.class);
+    paymentProcessingSaga = mock(PaymentProcessingSaga.class);
+    mockSyncFxCall();
+  }
+
+  private void mockSyncFxCall() {
+    doAnswer(invocation -> {
+      StateContext<PaymentState, PaymentEvent> context = invocation.getArgument(0);
+      Mono.delay(Duration.ofMillis(50))
+          .flatMap(t -> context.getStateMachine()
+              .sendEvent(Mono.just(MessageBuilder.withPayload(PaymentEvent.FX_SUCCESS).build()))
+              .next())
+          .subscribe();
+      return null;
+    }).when(paymentProcessingSaga).syncFxCall(any());
   }
 
   private void initMockResponses() {
@@ -111,13 +137,13 @@ class GeneratedStateMachineConfigTest {
     PaymentStateMachinePersister persister = new PaymentStateMachinePersister();
 
     paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
-        stateMachineFactory, interceptor, persister);
+        stateMachineFactory, interceptor, persister, parallelSagaJoinInterceptor);
   }
 
 
   private StateMachine<PaymentState, PaymentEvent> buildStateMachine() throws Exception {
-    StateMachineConfig config = new StateMachineConfig(fraudCheckService, feeCalculationService,
-        walletClient, ledgerPublisher);
+    StateMachineConfig config = new StateMachineConfig(feeCalculationService, walletClient,
+        ledgerPublisher, paymentProcessingSaga);
 
     StateMachineBuilder.Builder<PaymentState, PaymentEvent> builder = StateMachineBuilder.builder();
 
@@ -126,7 +152,7 @@ class GeneratedStateMachineConfigTest {
     config.configure(builder.configureTransitions());
 
     StateMachine<PaymentState, PaymentEvent> sm = builder.build();
-    sm.start();
+    sm.startReactively().block();
     return sm;
   }
 
@@ -144,14 +170,17 @@ class GeneratedStateMachineConfigTest {
     @DisplayName("NEW → PROCESSING on INITIATE")
     void newToProcessingOnInitiate() {
       paymentService.processEvent(1L, PaymentEvent.INITIATE);
-      assertThat(lastStateMachine.getState().getIds()).contains(PaymentState.PROCESSING,
-          PaymentState.AUTH_PENDING, PaymentState.FRAUD_EVALUATING);
+      Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(
+          () -> assertThat(lastStateMachine.getState().getIds()).contains(PaymentState.PROCESSING,
+              PaymentState.AUTH_PENDING, PaymentState.FRAUD_EVALUATING));
     }
 
     @Test
     @DisplayName("PROCESSING → FAILED on FAIL")
     void processingToFailedOnFail() {
       paymentService.processEvent(1L, PaymentEvent.INITIATE);
+      Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(
+          () -> assertThat(testPayment.currentState()).isEqualTo(PaymentState.PROCESSING));
       paymentService.processEvent(1L, PaymentEvent.FAIL);
 
       assertThat(testPayment.currentState()).isEqualTo(PaymentState.FAILED);
@@ -161,6 +190,8 @@ class GeneratedStateMachineConfigTest {
     @DisplayName("PROCESSING → CANCELED on CANCEL")
     void processingToCanceledOnCancel() {
       paymentService.processEvent(1L, PaymentEvent.INITIATE);
+      Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(
+          () -> assertThat(testPayment.currentState()).isEqualTo(PaymentState.PROCESSING));
       paymentService.processEvent(1L, PaymentEvent.CANCEL);
 
       assertThat(testPayment.currentState()).isEqualTo(PaymentState.CANCELED);

@@ -43,10 +43,10 @@ public class PaymentStateMachinePersister
         payment.getId());
     StateMachineContext<PaymentState, PaymentEvent> ctx = createContext(stateNames,
         PaymentState.valueOf(stateNames[0]), createExtendedState(payment));
-    stateMachine.stop();
+    stateMachine.stopReactively().block();
     stateMachine.getStateMachineAccessor()
-        .doWithAllRegions(access -> access.resetStateMachine(ctx));
-    stateMachine.start();
+        .doWithRegion(access -> access.resetStateMachineReactively(ctx).block());
+    stateMachine.startReactively().block();
     stateMachine.getExtendedState().getVariables().put(IS_RESTORING, Boolean.FALSE);
     return stateMachine;
   }

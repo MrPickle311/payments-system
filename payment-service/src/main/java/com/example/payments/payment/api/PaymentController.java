@@ -42,9 +42,8 @@ public class PaymentController implements PaymentsApi {
 
   @Override
   public ResponseEntity<List<ApiPaymentHistory>> getPaymentHistory(final Long id) {
-    final List<ApiPaymentHistory> history = paymentService.getPaymentHistory(id).stream()
-
-        .map(paymentMapper::toApi).toList();
+    final List<ApiPaymentHistory> history =
+        paymentService.getPaymentHistory(id).stream().map(paymentMapper::toApi).toList();
     return ResponseEntity.ok(history);
   }
 }

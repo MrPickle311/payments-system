@@ -8,22 +8,48 @@ title Payment State Machine with Orthogonal Regions
 
 [*] --> NEW
 
-NEW --> PROCESSING : INITIATE
+NEW --> FX_CONVERSION : INITIATE
+
+state FX_CONVERSION {
+  FX_CONVERSION : entry / syncFxCallAction
+}
+FX_CONVERSION --> PROCESSING : FX_SUCCESS
+FX_CONVERSION --> FAILED : FX_FAIL
 
 state PROCESSING {
   state Authorization {
     [*] --> AUTH_PENDING
+    AUTH_PENDING : entry / asyncAuthorizationAction
 
-    AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n[fraudCheckGuard]\n/ feeCalculationAction\n  (err: feeCalculationErrorAction)
-    AUTH_PENDING --> AUTH_REJECTED : AUTHORIZE\n[fraudCheckGuard → HIGH risk]
+    AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n/ feeCalculationAction\n  (err: feeCalculationErrorAction)
+    AUTH_PENDING --> AUTH_REJECTED : AUTH_FAIL
   }
 
   --
 
   state FraudCheck {
     [*] --> FRAUD_EVALUATING
+    FRAUD_EVALUATING : entry / asyncFraudCheckAction
     FRAUD_EVALUATING --> FRAUD_PASSED  : FRAUD_CLEAR
     FRAUD_EVALUATING --> FRAUD_DETECTED : FRAUD_ALERT
+  }
+
+  --
+
+  state LimitsCheck {
+    [*] --> LIMITS_EVALUATING
+    LIMITS_EVALUATING : entry / asyncLimitsCheckAction
+    LIMITS_EVALUATING --> LIMITS_OK : LIMITS_CLEAR
+    LIMITS_EVALUATING --> LIMITS_EXCEEDED : LIMITS_REJECT
+  }
+
+  --
+
+  state SanctionsCheck {
+    [*] --> SANCTIONS_EVALUATING
+    SANCTIONS_EVALUATING : entry / asyncSanctionsCheckAction
+    SANCTIONS_EVALUATING --> SANCTIONS_CLEARED : SANCTIONS_PASS
+    SANCTIONS_EVALUATING --> SANCTIONS_HIT : SANCTIONS_FAIL
   }
 }
 
@@ -31,20 +57,36 @@ PROCESSING --> COMPLETED : COMPLETE\n/ settlementAction\n  (err: settlementError
 note on link
   **Guard:** AUTH_APPROVED
   **AND** FRAUD_PASSED
+  **AND** LIMITS_OK
+  **AND** SANCTIONS_CLEARED
 end note
 
 PROCESSING --> FAILED : FAIL
 note on link
   AUTH_REJECTED
   **OR** FRAUD_DETECTED
+  **OR** LIMITS_EXCEEDED
+  **OR** SANCTIONS_HIT
 end note
 
 PROCESSING --> CANCELED : CANCEL
 
 state COMPLETED {
-  COMPLETED : entry / completedEntryAction\n  (skipped when isRestoring=true)
+  COMPLETED : entry / completedEntryAction
+}
+
+state FAILED {
+  FAILED : entry / failedEntryAction
+}
+
+state CANCELED {
+  CANCELED : entry / canceledEntryAction
 }
 
 COMPLETED --> REFUNDED : REFUND\n[refundWindowGuard]\n(30-day window)
+
+state REFUNDED {
+  REFUNDED : entry / refundedEntryAction
+}
 
 @enduml

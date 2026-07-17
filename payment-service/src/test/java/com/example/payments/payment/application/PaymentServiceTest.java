@@ -6,6 +6,7 @@ import com.example.payments.payment.domain.PaymentHistory;
 import com.example.payments.payment.domain.PaymentNotFoundException;
 import com.example.payments.payment.domain.PaymentRepository;
 import com.example.payments.payment.domain.PaymentHistoryRepository;
+import com.example.payments.payment.application.saga.ParallelSagaJoinInterceptor;
 import com.example.payments.payment.domain.InvalidTransitionException;
 import reactor.core.publisher.Mono;
 import com.example.payments.payment.domain.enums.PaymentEvent;
@@ -23,6 +24,7 @@ import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.statemachine.state.State;
+import org.springframework.statemachine.access.StateMachineAccessor;
 import reactor.core.publisher.Flux;
 
 import java.math.BigDecimal;
@@ -58,12 +60,16 @@ class PaymentServiceTest {
   @Mock
   private PaymentStateMachinePersister stateMachinePersister;
 
+  @Mock
+  private ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
+
   private PaymentService paymentService;
 
   @BeforeEach
   void setUp() {
-    paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
-        stateMachineFactory, stateMachineInterceptor, stateMachinePersister);
+    paymentService =
+        new PaymentService(paymentRepository, paymentHistoryRepository, stateMachineFactory,
+            stateMachineInterceptor, stateMachinePersister, parallelSagaJoinInterceptor);
   }
 
   private static final String TX1 = "tx1";
@@ -156,11 +162,22 @@ class PaymentServiceTest {
     when(sm.getState()).thenReturn(state);
     when(state.getIds()).thenReturn(List.of(mockState));
     when(state.getId()).thenReturn(mockState);
+    mockSendEventAndAccessor(sm);
+    return sm;
+  }
+
+  private void mockSendEventAndAccessor(StateMachine<PaymentState, PaymentEvent> sm) {
     StateMachineEventResult<PaymentState, PaymentEvent> result =
         mock(StateMachineEventResult.class);
     when(result.getResultType()).thenReturn(ACCEPTED);
     when(sm.sendEvent(any(Mono.class))).thenReturn(Flux.just(result));
-    return sm;
+    when(sm.stopReactively()).thenReturn(Mono.empty());
+    when(sm.startReactively()).thenReturn(Mono.empty());
+    when(sm.stopReactively()).thenReturn(Mono.empty());
+    when(sm.startReactively()).thenReturn(Mono.empty());
+
+    StateMachineAccessor<PaymentState, PaymentEvent> accessor = mock(StateMachineAccessor.class);
+    when(sm.getStateMachineAccessor()).thenReturn(accessor);
   }
 
   @Test
@@ -185,9 +202,6 @@ class PaymentServiceTest {
     when(stateBefore.getIds()).thenReturn(List.of(NEW));
     when(stateAfter.getIds()).thenReturn(List.of(AUTHORIZED));
     when(stateAfter.getId()).thenReturn(AUTHORIZED);
-    StateMachineEventResult<PaymentState, PaymentEvent> result =
-        mock(StateMachineEventResult.class);
-    when(result.getResultType()).thenReturn(ACCEPTED);
-    when(sm.sendEvent(any(Mono.class))).thenReturn(Flux.just(result));
+    mockSendEventAndAccessor(sm);
   }
 }
