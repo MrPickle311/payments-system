@@ -7,12 +7,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SpringDataPaymentRepository extends JpaRepository<PaymentJpaEntity, Long> {
 
   Optional<PaymentJpaEntity> findByTransactionId(String transactionId);
+
+  List<PaymentJpaEntity> findByState(String state);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT p FROM PaymentJpaEntity p WHERE p.id = :id")
