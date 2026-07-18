@@ -52,8 +52,9 @@ public class PaymentStateMachineInterceptor
     PaymentEvent event = context.getEvent();
     log.info("[Interceptor] Record transition for payment {}: {} --({})--> {}", paymentId, source,
         event, target);
-    paymentHistoryRepository.save(PaymentHistory.builder().paymentId(paymentId)
-        .fromState(source.name()).toState(target.name())
-        .event(event != null ? event.name() : "AUTO").timestamp(LocalDateTime.now(ZoneId.systemDefault())).build());
+    paymentHistoryRepository
+        .save(PaymentHistory.builder().paymentId(paymentId).fromState(source.name())
+            .toState(target.name()).event(event != null ? event.name() : "AUTO")
+            .timestamp(LocalDateTime.now(ZoneId.systemDefault())).build());
   }
 }

@@ -3,7 +3,6 @@ package com.example.payment.infrastructure.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -84,8 +83,14 @@ class PaymentRepositoryAdapterTest {
     Payment domain = new Payment();
     domain.setId(1L);
     domain.registerCreationEvent();
-
-    verify(eventPublisher, times(1)).publishEvent(any(PaymentDomainEvent.class));
+    PaymentJpaEntity entity = new PaymentJpaEntity();
+    PaymentJpaEntity saved = new PaymentJpaEntity();
+    Payment savedDomain = new Payment();
+    when(mapper.toEntity(domain)).thenReturn(entity);
+    when(repository.save(entity)).thenReturn(saved);
+    when(mapper.toDomain(saved)).thenReturn(savedDomain);
+    assertEquals(savedDomain, adapter.save(domain));
+    verify(eventPublisher).publishEvent(any(PaymentDomainEvent.class));
     assertTrue(domain.getDomainEvents().isEmpty());
   }
 }

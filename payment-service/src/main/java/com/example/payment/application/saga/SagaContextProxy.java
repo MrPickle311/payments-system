@@ -93,16 +93,8 @@ public class SagaContextProxy {
     return context.getExtendedState().get(IS_RESTORING, Boolean.class);
   }
 
-  public String getAuthStatus() {
-    return context.getExtendedState().get(AUTH_STATUS, String.class);
-  }
-
   public void setAuthStatus(String status) {
     context.getExtendedState().getVariables().put(AUTH_STATUS, status);
-  }
-
-  public String getFraudStatus() {
-    return context.getExtendedState().get(FRAUD_STATUS, String.class);
   }
 
   public void setFraudStatus(String status) {
@@ -115,10 +107,6 @@ public class SagaContextProxy {
 
   public void setLimitsStatus(String status) {
     context.getExtendedState().getVariables().put(LIMITS_STATUS, status);
-  }
-
-  public String getSanctionsStatus() {
-    return context.getExtendedState().get(SANCTIONS_STATUS, String.class);
   }
 
   public void setSanctionsStatus(String status) {

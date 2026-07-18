@@ -140,8 +140,8 @@ public class PaymentProcessingSaga {
     String amount = proxy.getPaymentAmount();
     String currency = proxy.getPaymentCurrency();
     return fraudCheckService.checkFraud(FraudRequest.newBuilder().setPaymentId(proxy.getPaymentId())
-        .setAmount(amount != null ? amount : ZERO_AMOUNT).setCurrency(currency != null ? currency : EMPTY_STRING)
-        .build());
+        .setAmount(amount != null ? amount : ZERO_AMOUNT)
+        .setCurrency(currency != null ? currency : EMPTY_STRING).build());
   }
 
   public void startAuthorization(StateContext<PaymentState, PaymentEvent> context) {
@@ -176,7 +176,8 @@ public class PaymentProcessingSaga {
     String amount = proxy.getPaymentAmount();
     String currency = proxy.getPaymentCurrency();
     return limitsService.checkLimits(LimitsRequest.newBuilder().setPaymentId(proxy.getPaymentId())
-        .setSourceUserId(userId != null ? userId : 0L).setAmount(amount != null ? amount : ZERO_AMOUNT)
+        .setSourceUserId(userId != null ? userId : 0L)
+        .setAmount(amount != null ? amount : ZERO_AMOUNT)
         .setCurrency(currency != null ? currency : EMPTY_STRING).build());
   }
 
@@ -196,9 +197,10 @@ public class PaymentProcessingSaga {
   private SanctionsResponse callSanctionsService(SagaContextProxy proxy) {
     Long sourceUserId = proxy.getSourceUserId();
     Long targetUserId = proxy.getTargetUserId();
-    return sanctionsService.checkSanctions(SanctionsRequest.newBuilder()
-        .setPaymentId(proxy.getPaymentId()).setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
-        .setTargetUserId(targetUserId != null ? targetUserId : 0L).build());
+    return sanctionsService
+        .checkSanctions(SanctionsRequest.newBuilder().setPaymentId(proxy.getPaymentId())
+            .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
+            .setTargetUserId(targetUserId != null ? targetUserId : 0L).build());
   }
 
   public void asyncFeeCalculationAction(StateContext<PaymentState, PaymentEvent> context) {
@@ -255,7 +257,8 @@ public class PaymentProcessingSaga {
       sourceCurrency = proxy.getPaymentCurrency();
     }
     return walletService.debit(DebitRequest.newBuilder().setPaymentId(proxy.getPaymentId())
-        .setSourceUserId(sourceUserId != null ? sourceUserId : 0L).setTargetUserId(INTERNAL_FEE_USER_ID)
+        .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
+        .setTargetUserId(INTERNAL_FEE_USER_ID)
         .setAmount(feeAmount != null ? feeAmount : ZERO_AMOUNT)
         .setCurrency(sourceCurrency != null ? sourceCurrency : EMPTY_STRING).build());
   }
@@ -274,7 +277,8 @@ public class PaymentProcessingSaga {
     var proxy = SagaContextProxy.of(context);
     String feeAmount = proxy.getFeeAmount();
     Long sourceUserId = proxy.getSourceUserId();
-    if (STATUS_FEE_CHARGED.equals(proxy.getFeeStatus()) && feeAmount != null && sourceUserId != null) {
+    if (STATUS_FEE_CHARGED.equals(proxy.getFeeStatus()) && feeAmount != null
+        && sourceUserId != null) {
       refundFee(proxy, feeAmount, sourceUserId);
     }
     if (STATUS_LIMITS_OK.equals(proxy.getLimitsStatus()) && sourceUserId != null) {
@@ -330,9 +334,10 @@ public class PaymentProcessingSaga {
       targetCurrency = proxy.getPaymentCurrency();
     }
     var req = DebitRequest.newBuilder().setPaymentId(proxy.getPaymentId())
-        .setSourceUserId(sourceUserId != null ? sourceUserId : 0L).setTargetUserId(targetUserId != null ? targetUserId : 0L)
-        .setAmount(amount != null ? amount : ZERO_AMOUNT).setCurrency(targetCurrency != null ? targetCurrency : EMPTY_STRING)
-        .build();
+        .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
+        .setTargetUserId(targetUserId != null ? targetUserId : 0L)
+        .setAmount(amount != null ? amount : ZERO_AMOUNT)
+        .setCurrency(targetCurrency != null ? targetCurrency : EMPTY_STRING).build();
     return walletService.debit(req);
   }
 

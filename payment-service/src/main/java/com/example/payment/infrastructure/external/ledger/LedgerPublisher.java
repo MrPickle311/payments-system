@@ -28,9 +28,10 @@ public class LedgerPublisher {
     }
   }
 
-  private static String toJsonPayload(Long paymentId, BigDecimal gross, BigDecimal net, String currency) {
+  private static String toJsonPayload(Long paymentId, BigDecimal gross, BigDecimal net,
+      String currency) {
     return String.format(
-            "{\"paymentId\":%d,\"grossAmount\":%s,\"netAmount\":%s,\"currency\":\"%s\",\"timestamp\":\"%s\"}",
-            paymentId, gross, net, currency, LocalDateTime.now(ZoneId.systemDefault()));
+        "{\"paymentId\":%d,\"grossAmount\":%s,\"netAmount\":%s,\"currency\":\"%s\",\"timestamp\":\"%s\"}",
+        paymentId, gross, net, currency, LocalDateTime.now(ZoneId.systemDefault()));
   }
 }

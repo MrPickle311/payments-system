@@ -1,6 +1,5 @@
 package com.example.payment.domain;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository {
@@ -9,8 +8,6 @@ public interface PaymentRepository {
   Optional<Payment> findByIdWithLock(Long id);
 
   Optional<Payment> findByTransactionId(String transactionId);
-
-  List<Payment> findByState(String state);
 
   Payment save(Payment payment);
 
