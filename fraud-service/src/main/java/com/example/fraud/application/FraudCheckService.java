@@ -1,21 +1,13 @@
-package com.example.payments.fraud.application;
+package com.example.fraud.application;
 
-import com.example.payments.fraud.domain.FraudRecord;
-import com.example.payments.fraud.domain.FraudRecordRepository;
-import com.example.payments.sharedkernel.Money;
+import com.example.payments.common.sharedkernel.Money;
 import io.micrometer.observation.annotation.Observed;
-import io.micrometer.tracing.annotation.SpanTag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
-
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class FraudCheckService implements FraudCheckPort {
 
@@ -39,13 +31,8 @@ public class FraudCheckService implements FraudCheckPort {
   private static final int SCORE_LOW = 25;
   private static final int SCORE_MINIMAL = 10;
 
-  private final FraudRecordRepository fraudRecordRepository;
-
-
-
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   @Observed(name = "evaluate-fraud")
-  public FraudResult evaluate(@SpanTag("payment.id") Long paymentId, Money money) {
+  public FraudResult evaluate(Long paymentId, Money money) {
     log.info("[FraudAPI] → Sending check request | payment={} amount={} {}", paymentId,
         money.amount(), money.currency());
     simulateNetworkLatency();
@@ -53,27 +40,18 @@ public class FraudCheckService implements FraudCheckPort {
     String riskLevel = getRiskLevel(score);
     String recommendation =
         score >= HIGH_RISK_THRESHOLD ? BLOCK_RECOMMENDATION : ALLOW_RECOMMENDATION;
-    log.info("[FraudAPI] ← Response received | payment={} score={} risk={} recommendation={}",
-        paymentId, score, riskLevel, recommendation);
-    saveFraudRecord(paymentId, score, riskLevel, recommendation);
+    log.info("[FraudAPI] ← Response | payment={} score={} risk={} recommendation={}", paymentId,
+        score, riskLevel, recommendation);
     return new FraudResult(score, riskLevel, recommendation);
-  }
-
-  private void saveFraudRecord(Long paymentId, int score, String riskLevel, String recommendation) {
-    FraudRecord fraudRecord = FraudRecord.builder().paymentId(paymentId).score(score)
-        .riskLevel(riskLevel).recommendation(recommendation).build();
-    fraudRecordRepository.save(fraudRecord);
   }
 
   private static String getRiskLevel(int score) {
     if (score >= HIGH_RISK_THRESHOLD) {
       return HIGH_RISK_LEVEL;
     }
-
     if (score >= MEDIUM_RISK_THRESHOLD) {
       return MEDIUM_RISK_LEVEL;
     }
-
     return LOW_RISK_LEVEL;
   }
 
