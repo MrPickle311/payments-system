@@ -1,9 +1,8 @@
 package com.example.payments.wallet.application;
 
-import com.example.payments.common.dto.DebitRequest;
-import com.example.payments.common.dto.DebitResponse;
 import com.example.payments.wallet.domain.WalletAccount;
 import com.example.payments.wallet.application.port.WalletAccountPort;
+import com.example.payments.wallet.grpc.DebitRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,9 +15,7 @@ import java.util.Optional;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_INSUFFICIENT_FUNDS;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,61 +27,55 @@ class WalletServiceTest {
   @InjectMocks
   private WalletService walletService;
 
-  private static final String CURRENCY_UNITED_STATES_DOLLAR = "USD";
-  private static final String CURRENCY_EURO = "EUR";
-  private static final BigDecimal BALANCE_ONE_THOUSAND = new BigDecimal("1000.00");
+  private static final String USD = "USD";
+  private static final BigDecimal BALANCE = new BigDecimal("1000.00");
 
-  private WalletAccount createAccount(String currency) {
-    return WalletAccount.builder().id(1L).userId(1L).balance(BALANCE_ONE_THOUSAND)
-        .currency(currency).build();
-  }
-
-  private DebitRequest createRequest(long paymentId, String amount, String currency) {
-    return DebitRequest.builder().paymentId(paymentId).amount(new BigDecimal(amount))
-        .currency(currency).build();
+  private WalletAccount createAccount(long userId, String currency) {
+    return WalletAccount.builder().id(userId).userId(userId).balance(BALANCE).currency(currency).build();
   }
 
   @Test
-  void testDebitShouldCreateMockAccount() {
-    DebitRequest request = createRequest(10L, "100.00", CURRENCY_UNITED_STATES_DOLLAR);
-    when(walletAccountPort.findByUserIdAndCurrency(1L, CURRENCY_UNITED_STATES_DOLLAR))
-        .thenReturn(Optional.empty());
-    WalletAccount mockAccount = createAccount(CURRENCY_UNITED_STATES_DOLLAR);
-    when(walletAccountPort.save(any(WalletAccount.class))).thenReturn(mockAccount);
+  void testDebitBetweenUsersCreateAccount() {
+    DebitRequest req = DebitRequest.newBuilder().setPaymentId(10L).setAmount("100.00")
+        .setCurrency(USD).setSourceUserId(1L).setTargetUserId(2L).build();
+    when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.empty());
+    when(walletAccountPort.findByUserIdAndCurrency(2L, USD)).thenReturn(Optional.empty());
+    WalletAccount src = createAccount(1L, USD);
+    WalletAccount tgt = createAccount(2L, USD);
+    when(walletAccountPort.save(any(WalletAccount.class))).thenReturn(src, tgt);
 
-    DebitResponse response = walletService.debit(request);
+    String status = walletService.debitBetweenUsers(req);
 
-    assertEquals(STATUS_SUCCESS, response.getStatus());
-    assertNotNull(response.getReferenceId());
-    verify(walletAccountPort).findByUserIdAndCurrency(1L, CURRENCY_UNITED_STATES_DOLLAR);
-    assertEquals(new BigDecimal("900.00"), mockAccount.getBalance());
+    assertEquals(STATUS_SUCCESS, status);
+    assertEquals(new BigDecimal("900.00"), src.getBalance());
   }
 
   @Test
-  void testDebitInsufficientFunds() {
-    DebitRequest request = createRequest(11L, "2000.00", CURRENCY_UNITED_STATES_DOLLAR);
-    WalletAccount existingAccount = createAccount(CURRENCY_UNITED_STATES_DOLLAR);
-    when(walletAccountPort.findByUserIdAndCurrency(1L, CURRENCY_UNITED_STATES_DOLLAR))
-        .thenReturn(Optional.of(existingAccount));
+  void testDebitBetweenUsersInsufficientFunds() {
+    DebitRequest req = DebitRequest.newBuilder().setPaymentId(11L).setAmount("2000.00")
+        .setCurrency(USD).setSourceUserId(1L).setTargetUserId(2L).build();
+    WalletAccount src = createAccount(1L, USD);
+    when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.of(src));
 
-    DebitResponse response = walletService.debit(request);
+    String status = walletService.debitBetweenUsers(req);
 
-    assertEquals(STATUS_INSUFFICIENT_FUNDS, response.getStatus());
-    assertEquals(BALANCE_ONE_THOUSAND, existingAccount.getBalance());
+    assertEquals(STATUS_INSUFFICIENT_FUNDS, status);
+    assertEquals(BALANCE, src.getBalance());
   }
 
   @Test
-  void testDebitSuccess() {
-    DebitRequest request = createRequest(12L, "200.00", CURRENCY_EURO);
-    WalletAccount existingAccount = createAccount(CURRENCY_EURO);
-    when(walletAccountPort.findByUserIdAndCurrency(1L, CURRENCY_EURO))
-        .thenReturn(Optional.of(existingAccount));
+  void testDebitBetweenUsersSuccess() {
+    DebitRequest req = DebitRequest.newBuilder().setPaymentId(12L).setAmount("200.00")
+        .setCurrency(USD).setSourceUserId(1L).setTargetUserId(2L).build();
+    WalletAccount src = createAccount(1L, USD);
+    WalletAccount tgt = createAccount(2L, USD);
+    when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.of(src));
+    when(walletAccountPort.findByUserIdAndCurrency(2L, USD)).thenReturn(Optional.of(tgt));
 
-    DebitResponse response = walletService.debit(request);
+    String status = walletService.debitBetweenUsers(req);
 
-    assertEquals(STATUS_SUCCESS, response.getStatus());
-    assertNotNull(response.getReferenceId());
-    assertEquals(new BigDecimal("800.00"), existingAccount.getBalance());
-    verify(walletAccountPort).save(existingAccount);
+    assertEquals(STATUS_SUCCESS, status);
+    assertEquals(new BigDecimal("800.00"), src.getBalance());
+    assertEquals(new BigDecimal("1200.00"), tgt.getBalance());
   }
 }
