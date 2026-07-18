@@ -40,7 +40,8 @@ public class FxGrpcService extends FxServiceGrpc.FxServiceImplBase {
     observer.onCompleted();
   }
 
-  private FxResponse handleConversion(String sourceCurrency, String targetCurrency, BigDecimal amount) {
+  private FxResponse handleConversion(String sourceCurrency, String targetCurrency,
+      BigDecimal amount) {
     if (sourceCurrency.equals(targetCurrency)) {
       return buildSuccessResponse(amount.setScale(SCALE, ROUNDING), targetCurrency, BigDecimal.ONE);
     }
@@ -55,11 +56,7 @@ public class FxGrpcService extends FxServiceGrpc.FxServiceImplBase {
   }
 
   private FxResponse buildSuccessResponse(BigDecimal amount, String currency, BigDecimal rate) {
-    return FxResponse.newBuilder()
-            .setSuccess(true)
-            .setConvertedAmount(amount.toPlainString())
-            .setTargetCurrency(currency)
-            .setExchangeRate(rate.toPlainString())
-            .build();
+    return FxResponse.newBuilder().setSuccess(true).setConvertedAmount(amount.toPlainString())
+        .setTargetCurrency(currency).setExchangeRate(rate.toPlainString()).build();
   }
 }

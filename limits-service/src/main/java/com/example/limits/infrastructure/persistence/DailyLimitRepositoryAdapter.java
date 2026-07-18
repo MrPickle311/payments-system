@@ -24,11 +24,8 @@ public class DailyLimitRepositoryAdapter implements DailyLimitRepository {
   public DailyLimit save(DailyLimit limit) {
     DailyLimitRecordEntity entity =
         jpaRepository.findByUserIdAndDate(limit.getUserId(), limit.getDate())
-            .orElseGet(() -> DailyLimitRecordEntity.builder()
-                    .userId(limit.getUserId())
-                    .date(limit.getDate())
-                    .amountUsed(limit.getAmountUsed())
-                    .build());
+            .orElseGet(() -> DailyLimitRecordEntity.builder().userId(limit.getUserId())
+                .date(limit.getDate()).amountUsed(limit.getAmountUsed()).build());
 
     entity.setAmountUsed(limit.getAmountUsed());
     jpaRepository.save(entity);
