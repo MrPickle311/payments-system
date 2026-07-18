@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package com.payments.contracts.v1;
+
+option java_multiple_files = true;
+option java_package = "com.payments.contracts.v1.fx";
+
+service FxService {
+  rpc ProcessFx (ProcessFxRequest) returns (ProcessFxResponse);
+}
+
+message ProcessFxRequest {
+  int64 payment_id = 1;
+}
+
+message ProcessFxResponse {
+  bool success = 1;
+}

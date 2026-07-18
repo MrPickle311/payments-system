@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package com.payments.contracts.v1;
+
+option java_multiple_files = true;
+option java_package = "com.payments.contracts.v1.authorization";
+
+service AuthorizationService {
+  rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse);
+  rpc ReverseAuthorization (ReverseAuthorizationRequest) returns (ReverseAuthorizationResponse);
+}
+
+message AuthorizeRequest {
+  int64 payment_id = 1;
+}
+
+message AuthorizeResponse {
+  bool approved = 1;
+}
+
+message ReverseAuthorizationRequest {
+  int64 payment_id = 1;
+}
+
+message ReverseAuthorizationResponse {
+  bool reversed = 1;
+}

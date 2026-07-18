@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package com.example.payments.authorization;
+
+option java_multiple_files = true;
+option java_package = "com.example.payments.authorization.grpc";
+
+service AuthorizationService {
+  rpc Authorize (AuthorizationRequest) returns (AuthorizationResponse);
+  rpc ReverseAuthorization (AuthorizationRequest) returns (AuthorizationResponse);
+}
+
+message AuthorizationRequest {
+  int64 payment_id = 1;
+}
+
+message AuthorizationResponse {
+  bool success = 1;
+}

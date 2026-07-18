@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package com.payments.contracts.v1;
+
+option java_multiple_files = true;
+option java_package = "com.payments.contracts.v1.limits";
+
+service LimitsService {
+  rpc CheckAndReserveLimits (CheckLimitsRequest) returns (CheckLimitsResponse);
+  rpc ReleaseLimit (ReleaseLimitRequest) returns (ReleaseLimitResponse);
+}
+
+message CheckLimitsRequest {
+  int64 payment_id = 1;
+}
+
+message CheckLimitsResponse {
+  bool approved = 1;
+}
+
+message ReleaseLimitRequest {
+  int64 payment_id = 1;
+}
+
+message ReleaseLimitResponse {
+  bool released = 1;
+}

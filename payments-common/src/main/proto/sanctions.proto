@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package com.example.payments.sanctions;
+
+option java_multiple_files = true;
+option java_package = "com.example.payments.sanctions.grpc";
+
+service SanctionsService {
+  rpc CheckSanctions (SanctionsRequest) returns (SanctionsResponse);
+}
+
+message SanctionsRequest {
+  int64 payment_id = 1;
+  int64 source_user_id = 2;
+  int64 target_user_id = 3;
+}
+
+message SanctionsResponse {
+  bool success = 1;
+}

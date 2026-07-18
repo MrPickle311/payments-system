@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package com.example.payments.limits;
+
+option java_multiple_files = true;
+option java_package = "com.example.payments.limits.grpc";
+
+service LimitsService {
+  rpc CheckLimits (LimitsRequest) returns (LimitsResponse);
+  rpc ReleaseLimit (ReleaseLimitRequest) returns (ReleaseLimitResponse);
+}
+
+message LimitsRequest {
+  int64 payment_id = 1;
+  int64 source_user_id = 2;
+  string amount = 3;
+  string currency = 4;
+}
+
+message LimitsResponse {
+  bool success = 1;
+}
+
+message ReleaseLimitRequest {
+  int64 payment_id = 1;
+  int64 source_user_id = 2;
+  string amount = 3;
+}
+
+message ReleaseLimitResponse {
+  bool released = 1;
+}

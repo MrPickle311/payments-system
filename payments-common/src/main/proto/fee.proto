@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package com.example.payments.fee;
+
+option java_multiple_files = true;
+option java_package = "com.example.payments.fee.grpc";
+
+service FeeService {
+  rpc CalculateFee (FeeRequest) returns (FeeResponse);
+}
+
+message FeeRequest {
+  int64 payment_id = 1;
+  string amount = 2;
+  string currency = 3;
+}
+
+message FeeResponse {
+  bool success = 1;
+  string fee_amount = 2;
+  string currency = 3;
+}

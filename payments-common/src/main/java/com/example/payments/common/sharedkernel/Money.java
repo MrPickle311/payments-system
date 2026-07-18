@@ -1,4 +1,4 @@
-package com.example.payments.sharedkernel;
+package com.example.payments.common.sharedkernel;
 
 import org.jmolecules.ddd.annotation.ValueObject;
 
