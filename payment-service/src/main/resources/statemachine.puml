@@ -21,7 +21,7 @@ state PROCESSING {
     [*] --> AUTH_PENDING
     AUTH_PENDING : entry / asyncAuthorizationAction
 
-    AUTH_PENDING --> AUTH_APPROVED : AUTHORIZE\n/ feeCalculationAction\n  (err: feeCalculationErrorAction)
+    AUTH_PENDING --> AUTH_APPROVED : AUTH_SUCCESS
     AUTH_PENDING --> AUTH_REJECTED : AUTH_FAIL
   }
 
@@ -51,6 +51,18 @@ state PROCESSING {
     SANCTIONS_EVALUATING --> SANCTIONS_CLEARED : SANCTIONS_PASS
     SANCTIONS_EVALUATING --> SANCTIONS_HIT : SANCTIONS_FAIL
   }
+
+  --
+
+  state FeeCheck {
+    [*] --> FEE_EVALUATING
+    FEE_EVALUATING : entry / asyncFeeCalculationAction
+    FEE_EVALUATING --> FEE_CALCULATED : FEE_CALC_SUCCESS
+    FEE_CALCULATED : entry / asyncFeeChargeAction
+    FEE_CALCULATED --> FEE_CHARGED : FEE_CHARGE_SUCCESS
+    FEE_EVALUATING --> FEE_FAILED : FEE_CALC_FAIL
+    FEE_CALCULATED --> FEE_FAILED : FEE_CHARGE_FAIL
+  }
 }
 
 PROCESSING --> COMPLETED : COMPLETE\n/ settlementAction\n  (err: settlementErrorAction)
@@ -59,14 +71,18 @@ note on link
   **AND** FRAUD_PASSED
   **AND** LIMITS_OK
   **AND** SANCTIONS_CLEARED
+  **AND** FEE_CHARGED
 end note
 
-PROCESSING --> FAILED : FAIL
+PROCESSING --> FAILED : FAIL\n/ compensateFeeAction
 note on link
   AUTH_REJECTED
   **OR** FRAUD_DETECTED
   **OR** LIMITS_EXCEEDED
   **OR** SANCTIONS_HIT
+  **OR** FEE_FAILED
+  Compensates fee debit if FEE_CHARGED was reached.
+  Releases limits if LIMITS_OK was reached.
 end note
 
 PROCESSING --> CANCELED : CANCEL
