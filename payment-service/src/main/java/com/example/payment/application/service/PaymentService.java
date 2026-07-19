@@ -15,6 +15,7 @@ import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
 import com.example.payment.infrastructure.config.PaymentStateMachineInterceptor;
 import com.example.payment.infrastructure.config.PaymentStateMachinePersister;
+import com.example.payment.infrastructure.config.PaymentStateMachinePersistingInterceptor;
 import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.annotation.SpanTag;
 import java.util.Collection;
@@ -52,6 +53,7 @@ public class PaymentService {
   private final PaymentStateMachineInterceptor stateMachineInterceptor;
   private final PaymentStateMachinePersister stateMachinePersister;
   private final ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
+  private final PaymentStateMachinePersistingInterceptor persistingInterceptor;
   private final PaymentApplicationMapper paymentApplicationMapper;
 
   @Transactional
@@ -89,9 +91,18 @@ public class PaymentService {
       configureStateMachine(sm, payment);
       processStateMachineEvent(sm, payment, event);
     } finally {
-      sm.stopReactively().block();
+      stopIfTerminal(sm);
     }
     return savePayment(paymentId, payment);
+  }
+
+  private void stopIfTerminal(StateMachine<PaymentState, PaymentEvent> sm) {
+    var state = sm.getState();
+    if (state != null
+        && (state.getId() == PaymentState.COMPLETED || state.getId() == PaymentState.FAILED
+            || state.getId() == PaymentState.CANCELED || state.getId() == PaymentState.REFUNDED)) {
+      sm.stopReactively().block();
+    }
   }
 
   private @NonNull Payment savePayment(Long paymentId, Payment payment) {
@@ -118,8 +129,10 @@ public class PaymentService {
   private void configureStateMachine(StateMachine<PaymentState, PaymentEvent> stateMachine,
       Payment payment) {
     stateMachine.addStateListener(stateMachineInterceptor);
-    stateMachine.getStateMachineAccessor().doWithAllRegions(
-        accessor -> accessor.addStateMachineInterceptor(parallelSagaJoinInterceptor));
+    stateMachine.getStateMachineAccessor().doWithAllRegions(accessor -> {
+      accessor.addStateMachineInterceptor(parallelSagaJoinInterceptor);
+      accessor.addStateMachineInterceptor(persistingInterceptor);
+    });
     stateMachinePersister.restore(stateMachine, payment);
     var extState = stateMachine.getExtendedState().getVariables();
     extState.putIfAbsent(SOURCE_USER_ID, payment.getSourceUserId());

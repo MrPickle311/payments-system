@@ -3,11 +3,13 @@ package com.example.payment.application.saga;
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.statemachine.StateContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 
 import static com.example.payment.domain.PaymentConstants.AUTH_STATUS;
 import static com.example.payment.domain.PaymentConstants.FEE_AMOUNT;
@@ -27,6 +29,7 @@ import static com.example.payment.domain.PaymentConstants.TARGET_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.TARGET_USER_ID;
 
 @RequiredArgsConstructor(staticName = "of")
+@Slf4j
 public class SagaContextProxy {
 
   private final StateContext<PaymentState, PaymentEvent> context;
@@ -73,8 +76,36 @@ public class SagaContextProxy {
   }
 
   public void sendEvent(PaymentEvent event) {
-    context.getStateMachine()
-        .sendEvent(MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, getPaymentId()).build());
+    CompletableFuture.runAsync(() -> trySendEvent(event));
+  }
+
+  private void trySendEvent(PaymentEvent event) {
+    var message = MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, getPaymentId()).build();
+    boolean accepted = false;
+    int retries = 0;
+    while (!accepted && retries < 100) {
+      accepted = context.getStateMachine().sendEvent(message);
+      if (!accepted) {
+        sleep(50);
+        retries++;
+      }
+    }
+    if (!accepted) {
+      logRejectedEvent(event, retries);
+    }
+  }
+
+  private void logRejectedEvent(PaymentEvent event, int retries) {
+    log.warn("[SagaContextProxy] Event {} for payment {} was never accepted after {} retries",
+        event, getPaymentId(), retries);
+  }
+
+  private void sleep(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   public LocalDateTime getPaymentCreatedAt() {
@@ -82,7 +113,7 @@ public class SagaContextProxy {
   }
 
   public BigDecimal getPaymentAmountAsBigDecimal() {
-    return context.getExtendedState().get(PAYMENT_AMOUNT, BigDecimal.class);
+    return new BigDecimal(context.getExtendedState().get(PAYMENT_AMOUNT, String.class));
   }
 
   public BigDecimal getNetAmountAsBigDecimal() {

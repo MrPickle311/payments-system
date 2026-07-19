@@ -45,7 +45,7 @@ import static com.example.payment.domain.PaymentConstants.STATUS_LIMITS_RELEASED
 import static com.example.payment.domain.PaymentConstants.STATUS_SANCTIONS_CLEARED;
 import static com.example.payment.domain.PaymentConstants.STATUS_SANCTIONS_HIT;
 import static com.example.payment.domain.enums.PaymentEvent.AUTH_FAIL;
-import static com.example.payment.domain.enums.PaymentEvent.AUTHORIZE;
+import static com.example.payment.domain.enums.PaymentEvent.AUTH_SUCCESS;
 import static com.example.payment.domain.enums.PaymentEvent.FEE_CALC_FAIL;
 import static com.example.payment.domain.enums.PaymentEvent.FEE_CALC_SUCCESS;
 import static com.example.payment.domain.enums.PaymentEvent.FEE_CHARGE_FAIL;
@@ -150,7 +150,7 @@ public class PaymentProcessingSaga {
       var res = authorizationService
           .authorize(AuthorizationRequest.newBuilder().setPaymentId(proxy.getPaymentId()).build());
       proxy.setAuthStatus(res.getSuccess() ? STATUS_AUTH_APPROVED : STATUS_AUTH_REJECTED);
-      proxy.sendEvent(res.getSuccess() ? AUTHORIZE : AUTH_FAIL);
+      proxy.sendEvent(res.getSuccess() ? AUTH_SUCCESS : AUTH_FAIL);
     } catch (Exception ex) {
       log.error("Error on startAuthorization for paymentId={}", proxy.getPaymentId(), ex);
       proxy.setAuthStatus(STATUS_AUTH_REJECTED);

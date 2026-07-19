@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.listener.StateMachineListenerAdapter;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Slf4j
@@ -27,6 +28,7 @@ public class PaymentStateMachineInterceptor
   }
 
   @Override
+  @Transactional
   public void stateContext(StateContext<PaymentState, PaymentEvent> stateContext) {
     if (stateContext.getStage() == StateContext.Stage.STATE_CHANGED) {
       processStateChange(stateContext);

@@ -446,24 +446,49 @@ if (!actionNames.isEmpty()) {
     // Reactive Wrappers (Auto-generated)
     // =========================================================================
 
-    private final reactor.core.scheduler.Scheduler virtualThreadScheduler =
-            reactor.core.scheduler.Schedulers.fromExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+    private final java.util.concurrent.ExecutorService virtualThreadExecutor =
+            java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+
+    protected void sendFailureEvent(org.springframework.statemachine.StateContext<${stateEnumSimple}, ${eventEnumSimple}> context, Exception e) {
+        log.error("Unhandled exception in state machine action, transitioning to FAILED", e);
+        Long paymentId = context.getExtendedState().get("PAYMENT_ID", Long.class);
+        if (paymentId == null) return;
+        
+        org.springframework.messaging.Message<${eventEnumSimple}> msg = org.springframework.messaging.support.MessageBuilder
+            .withPayload(${eventEnumSimple}.FAIL)
+            .setHeader("PAYMENT_ID", paymentId)
+            .build();
+            
+        boolean accepted = false;
+        int retries = 0;
+        while (!accepted && retries < 100) {
+            accepted = context.getStateMachine().sendEvent(msg);
+            if (!accepted) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                retries++;
+            }
+        }
+        if (!accepted) {
+            log.warn("FAIL event for payment {} rejected after {} retries", paymentId, retries);
+        }
+    }
 
 """
     for (a in actionNames) {
         sb << """    protected org.springframework.statemachine.action.ReactiveAction<${stateEnumSimple}, ${eventEnumSimple}> ${a}() {
         return context -> reactor.core.publisher.Mono.fromRunnable(() -> {
-            try {
-                execute${a.capitalize()}(context);
-            } catch (Exception e) {
-                if (e instanceof RuntimeException) throw (RuntimeException) e;
-                throw new RuntimeException(e);
-            }
-        })
-        .subscribeOn(virtualThreadScheduler)
-        .doOnError(e -> log.error("Unhandled exception in state machine action: ${a}", e))
-        .onErrorResume(e -> reactor.core.publisher.Mono.empty())
-        .then();
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    execute${a.capitalize()}(context);
+                } catch (Exception e) {
+                    sendFailureEvent(context, e);
+                }
+            }, virtualThreadExecutor);
+        }).then();
     }
 
 """

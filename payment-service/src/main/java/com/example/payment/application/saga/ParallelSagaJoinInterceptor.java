@@ -59,25 +59,18 @@ public class ParallelSagaJoinInterceptor
     if (currentState == null || !isProcessingState(currentState)) {
       return;
     }
-
-    Collection<State<PaymentState, PaymentEvent>> regions = currentState.getStates();
-    if (regions == null || regions.size() < EXPECTED_REGION_COUNT) {
-      return;
-    }
-
-    if (areAllRegionsFinished(regions)) {
-      triggerCompletion(rootStateMachine, hasAnyRegionFailed(regions));
+    Collection<PaymentState> ids = currentState.getIds();
+    if (ids != null) {
+      long finishedRegions = ids.stream()
+          .filter(s -> SUCCESS_STATES.contains(s) || FAILURE_STATES.contains(s)).count();
+      if (finishedRegions >= EXPECTED_REGION_COUNT) {
+        triggerCompletion(rootStateMachine, hasAnyRegionFailed(ids));
+      }
     }
   }
 
-  private boolean areAllRegionsFinished(Collection<State<PaymentState, PaymentEvent>> regions) {
-    return regions.stream().map(State::getId)
-        .filter(s -> SUCCESS_STATES.contains(s) || FAILURE_STATES.contains(s))
-        .count() == regions.size();
-  }
-
-  private boolean hasAnyRegionFailed(Collection<State<PaymentState, PaymentEvent>> regions) {
-    return regions.stream().map(State::getId).anyMatch(FAILURE_STATES::contains);
+  private boolean hasAnyRegionFailed(Collection<PaymentState> ids) {
+    return ids.stream().anyMatch(FAILURE_STATES::contains);
   }
 
   private static boolean isProcessingState(State<PaymentState, PaymentEvent> currentState) {
@@ -88,11 +81,37 @@ public class ParallelSagaJoinInterceptor
       boolean anyFailed) {
     Long paymentId = rootStateMachine.getExtendedState().get(PAYMENT_ID, Long.class);
     PaymentEvent event = anyFailed ? PaymentEvent.FAIL : PaymentEvent.COMPLETE;
+    log.info("[JoinInterceptor] Triggering {} for paymentId={}", event, paymentId);
+    CompletableFuture.runAsync(() -> sendEventWithRetries(rootStateMachine, event, paymentId));
+  }
 
-    log.info(
-        "[JoinInterceptor] All {} parallel regions finished. anyFailed={}, Triggering {} for paymentId={}",
-        EXPECTED_REGION_COUNT, anyFailed, event, paymentId);
-    CompletableFuture.runAsync(() -> rootStateMachine
-        .sendEvent(MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, paymentId).build()));
+  private void sendEventWithRetries(StateMachine<PaymentState, PaymentEvent> sm, PaymentEvent evt,
+      Long pId) {
+    Message<PaymentEvent> msg = MessageBuilder.withPayload(evt).setHeader(PAYMENT_ID, pId).build();
+    boolean accepted = false;
+    int retries = 0;
+    while (!accepted && retries < 100) {
+      accepted = sm.sendEvent(msg);
+      if (!accepted) {
+        sleep50ms();
+        retries++;
+      }
+    }
+    logIfRejected(accepted, evt, pId, retries);
+  }
+
+  private void logIfRejected(boolean accepted, PaymentEvent evt, Long pId, int retries) {
+    if (!accepted) {
+      log.warn("[JoinInterceptor] Event {} for payment {} rejected after {} retries", evt, pId,
+          retries);
+    }
+  }
+
+  private void sleep50ms() {
+    try {
+      Thread.sleep(50);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }
