@@ -16,6 +16,7 @@ import com.example.payment.application.dto.CreatePaymentRequest;
 import com.example.payment.application.mapper.PaymentApplicationMapper;
 import com.example.payment.infrastructure.config.PaymentStateMachineInterceptor;
 import com.example.payment.infrastructure.config.PaymentStateMachinePersister;
+import com.example.payment.infrastructure.config.PaymentStateMachinePersistingInterceptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,6 +68,8 @@ class PaymentServiceTest {
   @Mock
   private ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
   @Mock
+  private PaymentStateMachinePersistingInterceptor persistingInterceptor;
+  @Mock
   private PaymentApplicationMapper paymentApplicationMapper;
 
   private PaymentService paymentService;
@@ -75,7 +78,7 @@ class PaymentServiceTest {
   void setUp() {
     paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
         stateMachineFactory, stateMachineInterceptor, stateMachinePersister,
-        parallelSagaJoinInterceptor, paymentApplicationMapper);
+        parallelSagaJoinInterceptor, persistingInterceptor, paymentApplicationMapper);
   }
 
   private static final String TX1 = "tx1";

@@ -6,6 +6,7 @@ import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.statemachine.StateContext;

@@ -4,7 +4,7 @@ import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
-import org.springframework.messaging.support.MessageBuilder;
+
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.state.State;
 import org.springframework.statemachine.support.StateMachineInterceptorAdapter;
@@ -82,36 +82,7 @@ public class ParallelSagaJoinInterceptor
     Long paymentId = rootStateMachine.getExtendedState().get(PAYMENT_ID, Long.class);
     PaymentEvent event = anyFailed ? PaymentEvent.FAIL : PaymentEvent.COMPLETE;
     log.info("[JoinInterceptor] Triggering {} for paymentId={}", event, paymentId);
-    CompletableFuture.runAsync(() -> sendEventWithRetries(rootStateMachine, event, paymentId));
-  }
-
-  private void sendEventWithRetries(StateMachine<PaymentState, PaymentEvent> sm, PaymentEvent evt,
-      Long pId) {
-    Message<PaymentEvent> msg = MessageBuilder.withPayload(evt).setHeader(PAYMENT_ID, pId).build();
-    boolean accepted = false;
-    int retries = 0;
-    while (!accepted && retries < 100) {
-      accepted = sm.sendEvent(msg);
-      if (!accepted) {
-        sleep50ms();
-        retries++;
-      }
-    }
-    logIfRejected(accepted, evt, pId, retries);
-  }
-
-  private void logIfRejected(boolean accepted, PaymentEvent evt, Long pId, int retries) {
-    if (!accepted) {
-      log.warn("[JoinInterceptor] Event {} for payment {} rejected after {} retries", evt, pId,
-          retries);
-    }
-  }
-
-  private void sleep50ms() {
-    try {
-      Thread.sleep(50);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    CompletableFuture
+        .runAsync(() -> SagaContextProxy.sendEventWithRetries(rootStateMachine, event, paymentId));
   }
 }

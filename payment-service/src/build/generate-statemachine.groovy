@@ -453,28 +453,7 @@ if (!actionNames.isEmpty()) {
         log.error("Unhandled exception in state machine action, transitioning to FAILED", e);
         Long paymentId = context.getExtendedState().get("PAYMENT_ID", Long.class);
         if (paymentId == null) return;
-        
-        org.springframework.messaging.Message<${eventEnumSimple}> msg = org.springframework.messaging.support.MessageBuilder
-            .withPayload(${eventEnumSimple}.FAIL)
-            .setHeader("PAYMENT_ID", paymentId)
-            .build();
-            
-        boolean accepted = false;
-        int retries = 0;
-        while (!accepted && retries < 100) {
-            accepted = context.getStateMachine().sendEvent(msg);
-            if (!accepted) {
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
-                retries++;
-            }
-        }
-        if (!accepted) {
-            log.warn("FAIL event for payment {} rejected after {} retries", paymentId, retries);
-        }
+        com.example.payment.application.saga.SagaContextProxy.sendEventWithRetries(context.getStateMachine(), ${eventEnumSimple}.FAIL, paymentId);
     }
 
 """

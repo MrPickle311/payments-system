@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.statemachine.StateContext;
+import org.springframework.statemachine.StateMachine;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -76,31 +77,29 @@ public class SagaContextProxy {
   }
 
   public void sendEvent(PaymentEvent event) {
-    CompletableFuture.runAsync(() -> trySendEvent(event));
+    CompletableFuture
+        .runAsync(() -> sendEventWithRetries(context.getStateMachine(), event, getPaymentId()));
   }
 
-  private void trySendEvent(PaymentEvent event) {
-    var message = MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, getPaymentId()).build();
+  public static void sendEventWithRetries(StateMachine<PaymentState, PaymentEvent> sm,
+      PaymentEvent event, Long paymentId) {
+    var message = MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, paymentId).build();
     boolean accepted = false;
     int retries = 0;
     while (!accepted && retries < 100) {
-      accepted = context.getStateMachine().sendEvent(message);
+      accepted = sm.sendEvent(message);
       if (!accepted) {
         sleep(50);
         retries++;
       }
     }
     if (!accepted) {
-      logRejectedEvent(event, retries);
+      log.warn("[SagaContextProxy] Event {} for payment {} was never accepted after {} retries",
+          event, paymentId, retries);
     }
   }
 
-  private void logRejectedEvent(PaymentEvent event, int retries) {
-    log.warn("[SagaContextProxy] Event {} for payment {} was never accepted after {} retries",
-        event, getPaymentId(), retries);
-  }
-
-  private void sleep(long millis) {
+  private static void sleep(long millis) {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
