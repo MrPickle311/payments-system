@@ -2,6 +2,7 @@ package com.example.payment.application.saga;
 
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 
@@ -15,6 +16,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payment.domain.enums.PaymentState.AUTH_APPROVED;
@@ -31,6 +33,7 @@ import static com.example.payment.domain.enums.PaymentState.SANCTIONS_HIT;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ParallelSagaJoinInterceptor
     extends StateMachineInterceptorAdapter<PaymentState, PaymentEvent> {
 
@@ -41,6 +44,8 @@ public class ParallelSagaJoinInterceptor
       EnumSet.of(AUTH_REJECTED, FRAUD_DETECTED, LIMITS_EXCEEDED, SANCTIONS_HIT, FEE_FAILED);
 
   private static final int EXPECTED_REGION_COUNT = 5;
+
+  private final ExecutorService virtualThreadExecutor;
 
   @Override
   public void postStateChange(State<PaymentState, PaymentEvent> state,
@@ -83,6 +88,6 @@ public class ParallelSagaJoinInterceptor
     PaymentEvent event = anyFailed ? PaymentEvent.FAIL : PaymentEvent.COMPLETE;
     log.info("[JoinInterceptor] Triggering {} for paymentId={}", event, paymentId);
     CompletableFuture
-        .runAsync(() -> SagaContextProxy.sendEventWithRetries(rootStateMachine, event, paymentId));
+        .runAsync(() -> SagaContextProxy.sendEventWithRetries(rootStateMachine, event, paymentId), virtualThreadExecutor);
   }
 }

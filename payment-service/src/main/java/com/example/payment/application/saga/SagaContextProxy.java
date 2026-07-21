@@ -10,7 +10,6 @@ import org.springframework.statemachine.StateMachine;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.concurrent.CompletableFuture;
 
 import static com.example.payment.domain.PaymentConstants.AUTH_STATUS;
 import static com.example.payment.domain.PaymentConstants.FEE_AMOUNT;
@@ -77,34 +76,13 @@ public class SagaContextProxy {
   }
 
   public void sendEvent(PaymentEvent event) {
-    CompletableFuture
-        .runAsync(() -> sendEventWithRetries(context.getStateMachine(), event, getPaymentId()));
+    sendEventWithRetries(context.getStateMachine(), event, getPaymentId());
   }
 
   public static void sendEventWithRetries(StateMachine<PaymentState, PaymentEvent> sm,
       PaymentEvent event, Long paymentId) {
     var message = MessageBuilder.withPayload(event).setHeader(PAYMENT_ID, paymentId).build();
-    boolean accepted = false;
-    int retries = 0;
-    while (!accepted && retries < 100) {
-      accepted = sm.sendEvent(message);
-      if (!accepted) {
-        sleep(50);
-        retries++;
-      }
-    }
-    if (!accepted) {
-      log.warn("[SagaContextProxy] Event {} for payment {} was never accepted after {} retries",
-          event, paymentId, retries);
-    }
-  }
-
-  private static void sleep(long millis) {
-    try {
-      Thread.sleep(millis);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    sm.sendEvent(message);
   }
 
   public LocalDateTime getPaymentCreatedAt() {

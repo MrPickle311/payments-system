@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 @Component
 @Slf4j
@@ -30,6 +31,7 @@ public class PaymentStateMachinePersistingInterceptor
 
   private final PaymentRepository paymentRepository;
   private final PaymentStateMachinePersister persister;
+  private final ExecutorService virtualThreadExecutor;
 
   @Override
   @Transactional
@@ -66,9 +68,10 @@ public class PaymentStateMachinePersistingInterceptor
       try {
         Thread.sleep(500);
       } catch (InterruptedException e) {
+        log.error("Interrupted scheduleStop", e);
         Thread.currentThread().interrupt();
       }
       rootStateMachine.stopReactively().subscribe();
-    });
+    }, virtualThreadExecutor);
   }
 }
