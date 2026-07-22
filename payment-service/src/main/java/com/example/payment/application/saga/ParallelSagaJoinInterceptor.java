@@ -19,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
+import static com.example.payment.domain.enums.PaymentEvent.COMPLETE;
+import static com.example.payment.domain.enums.PaymentEvent.FAIL;
 import static com.example.payment.domain.enums.PaymentState.AUTH_APPROVED;
 import static com.example.payment.domain.enums.PaymentState.AUTH_REJECTED;
 import static com.example.payment.domain.enums.PaymentState.FEE_CHARGED;
@@ -58,6 +60,8 @@ public class ParallelSagaJoinInterceptor
     }
   }
 
+  private static final String JOIN_TRIGGERED_KEY = "SAGA_JOIN_TRIGGERED";
+
   private void checkParallelJoinForAllRegions(
       StateMachine<PaymentState, PaymentEvent> rootStateMachine) {
     State<PaymentState, PaymentEvent> currentState = rootStateMachine.getState();
@@ -65,12 +69,22 @@ public class ParallelSagaJoinInterceptor
       return;
     }
     Collection<PaymentState> ids = currentState.getIds();
-    if (ids != null) {
-      long finishedRegions = ids.stream()
-          .filter(s -> SUCCESS_STATES.contains(s) || FAILURE_STATES.contains(s)).count();
-      if (finishedRegions >= EXPECTED_REGION_COUNT) {
-        triggerCompletion(rootStateMachine, hasAnyRegionFailed(ids));
-      }
+    if (ids != null && countFinishedRegions(ids) >= EXPECTED_REGION_COUNT) {
+      tryTriggerCompletion(rootStateMachine, ids);
+    }
+  }
+
+  private long countFinishedRegions(Collection<PaymentState> ids) {
+    return ids.stream().filter(s -> SUCCESS_STATES.contains(s) || FAILURE_STATES.contains(s))
+        .count();
+  }
+
+  private void tryTriggerCompletion(StateMachine<PaymentState, PaymentEvent> rootStateMachine,
+      Collection<PaymentState> ids) {
+    Object previous = rootStateMachine.getExtendedState().getVariables()
+        .putIfAbsent(JOIN_TRIGGERED_KEY, Boolean.TRUE);
+    if (previous == null) {
+      triggerCompletion(rootStateMachine, hasAnyRegionFailed(ids));
     }
   }
 
@@ -85,9 +99,10 @@ public class ParallelSagaJoinInterceptor
   private void triggerCompletion(StateMachine<PaymentState, PaymentEvent> rootStateMachine,
       boolean anyFailed) {
     Long paymentId = rootStateMachine.getExtendedState().get(PAYMENT_ID, Long.class);
-    PaymentEvent event = anyFailed ? PaymentEvent.FAIL : PaymentEvent.COMPLETE;
+    PaymentEvent event = anyFailed ? FAIL : COMPLETE;
     log.info("[JoinInterceptor] Triggering {} for paymentId={}", event, paymentId);
-    CompletableFuture
-        .runAsync(() -> SagaContextProxy.sendEventWithRetries(rootStateMachine, event, paymentId), virtualThreadExecutor);
+    CompletableFuture.runAsync(
+        () -> SagaContextProxy.sendEventWithRetries(rootStateMachine, event, paymentId),
+        virtualThreadExecutor);
   }
 }

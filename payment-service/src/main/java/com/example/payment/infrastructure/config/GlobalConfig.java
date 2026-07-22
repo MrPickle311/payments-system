@@ -9,8 +9,8 @@ import java.util.concurrent.Executors;
 @Configuration
 public class GlobalConfig {
 
-    @Bean
-    public ExecutorService virtualThreadExecutor() {
-        return Executors.newVirtualThreadPerTaskExecutor();
-    }
+  @Bean
+  public ExecutorService virtualThreadExecutor() {
+    return Executors.newVirtualThreadPerTaskExecutor();
+  }
 }

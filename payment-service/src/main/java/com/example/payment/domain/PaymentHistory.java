@@ -20,6 +20,9 @@ public class PaymentHistory {
 
   private Long id;
   private Long paymentId;
+
+  @Builder.Default
+  private String region = "ROOT";
   private String fromState;
   private String toState;
   private String event;

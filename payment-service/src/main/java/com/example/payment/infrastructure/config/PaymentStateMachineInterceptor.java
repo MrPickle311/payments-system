@@ -6,16 +6,19 @@ import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.listener.StateMachineListenerAdapter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.springframework.statemachine.StateContext.Stage.STATE_CHANGED;
+
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class PaymentStateMachineInterceptor
     extends StateMachineListenerAdapter<PaymentState, PaymentEvent> {
 
@@ -24,14 +27,10 @@ public class PaymentStateMachineInterceptor
 
   private final PaymentHistoryRepository paymentHistoryRepository;
 
-  public PaymentStateMachineInterceptor(PaymentHistoryRepository paymentHistoryRepository) {
-    this.paymentHistoryRepository = paymentHistoryRepository;
-  }
-
   @Override
   @Transactional
   public void stateContext(StateContext<PaymentState, PaymentEvent> stateContext) {
-    if (stateContext.getStage() == StateContext.Stage.STATE_CHANGED) {
+    if (stateContext.getStage() == STATE_CHANGED) {
       processStateChange(stateContext);
     }
   }
@@ -48,16 +47,37 @@ public class PaymentStateMachineInterceptor
     savePaymentHistory(context, paymentId);
   }
 
+  private static final String ROOT_REGION = "ROOT";
+
   private void savePaymentHistory(StateContext<PaymentState, PaymentEvent> context,
       Long paymentId) {
     PaymentState source = context.getSource().getId();
     PaymentState target = context.getTarget().getId();
     PaymentEvent event = context.getEvent();
-    log.info("[Interceptor] Record transition for payment {}: {} --({})--> {}", paymentId, source,
-        event, target);
-    paymentHistoryRepository
-        .save(PaymentHistory.builder().paymentId(paymentId).fromState(source.name())
+    String region = getRegion(context);
+
+    log.info("[Interceptor] Record transition for payment {} [Region: {}]: {} --({})--> {}",
+        paymentId, region, source, event, target);
+
+    PaymentHistory history =
+        PaymentHistory.builder().paymentId(paymentId).region(region).fromState(source.name())
             .toState(target.name()).event(event != null ? event.name() : "AUTO")
-            .timestamp(LocalDateTime.now(ZoneId.systemDefault())).build());
+            .timestamp(LocalDateTime.now(ZoneId.systemDefault())).build();
+    paymentHistoryRepository.save(history);
+  }
+
+  private String getRegion(StateContext<PaymentState, PaymentEvent> context) {
+    if (context.getTarget() == null) {
+      return ROOT_REGION;
+    }
+    PaymentState state = context.getTarget().getId();
+    return switch (state) {
+      case AUTH_PENDING, AUTH_APPROVED, AUTH_REJECTED, AUTHORIZED -> "Authorization";
+      case FRAUD_EVALUATING, FRAUD_PASSED, FRAUD_DETECTED -> "FraudCheck";
+      case LIMITS_EVALUATING, LIMITS_OK, LIMITS_EXCEEDED -> "LimitsCheck";
+      case SANCTIONS_EVALUATING, SANCTIONS_CLEARED, SANCTIONS_HIT -> "SanctionsCheck";
+      case FEE_EVALUATING, FEE_CALCULATED, FEE_CHARGED, FEE_FAILED -> "FeeCheck";
+      default -> ROOT_REGION;
+    };
   }
 }

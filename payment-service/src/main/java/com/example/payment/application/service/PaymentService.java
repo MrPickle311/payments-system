@@ -64,7 +64,7 @@ public class PaymentService {
     payment.registerCreationEvent();
     payment = paymentRepository.save(payment);
 
-    paymentHistoryRepository.save(PaymentHistory.builder().paymentId(payment.getId())
+    paymentHistoryRepository.save(PaymentHistory.builder().paymentId(payment.getId()).region("ROOT")
         .fromState(PaymentConstants.INITIAL_FROM_STATE).toState(PaymentState.NEW.name())
         .event(PaymentConstants.EVENT_CREATED).build());
 
@@ -81,7 +81,7 @@ public class PaymentService {
 
   @Observed(name = "process-payment-event")
   public Payment processEvent(@SpanTag("payment.id") Long paymentId, PaymentEvent event) {
-    Payment payment = paymentRepository.findByIdWithLock(paymentId)
+    Payment payment = paymentRepository.findById(paymentId)
         .orElseThrow(() -> new PaymentNotFoundException(paymentId));
     log.info("[Service] Processing event={} for payment={} (currentState={})", event, paymentId,
         payment.getState());

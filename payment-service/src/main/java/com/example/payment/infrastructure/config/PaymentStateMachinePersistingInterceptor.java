@@ -40,6 +40,10 @@ public class PaymentStateMachinePersistingInterceptor
       StateMachine<PaymentState, PaymentEvent> stateMachine,
       StateMachine<PaymentState, PaymentEvent> rootStateMachine) {
 
+    if (stateMachine != rootStateMachine) {
+      return;
+    }
+
     Long paymentId = rootStateMachine.getExtendedState().get(PAYMENT_ID, Long.class);
     if (paymentId != null) {
       saveAndStopIfTerminal(rootStateMachine, state.getId(), paymentId);
@@ -48,7 +52,7 @@ public class PaymentStateMachinePersistingInterceptor
 
   private void saveAndStopIfTerminal(StateMachine<PaymentState, PaymentEvent> rootStateMachine,
       PaymentState stateId, Long paymentId) {
-    paymentRepository.findByIdWithLock(paymentId).ifPresent(payment -> {
+    paymentRepository.findById(paymentId).ifPresent(payment -> {
       persister.persist(rootStateMachine, payment);
       Payment saved = paymentRepository.save(payment);
       log.info("[PersistingInterceptor] Saved state {} for payment {}", saved.getState(),

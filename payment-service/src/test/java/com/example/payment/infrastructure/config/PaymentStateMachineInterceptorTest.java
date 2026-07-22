@@ -1,6 +1,7 @@
 package com.example.payment.infrastructure.config;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -83,5 +84,22 @@ class PaymentStateMachineInterceptorTest {
     when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(false);
     interceptor.stateContext(stateContext);
     verify(paymentHistoryRepository).save(any(PaymentHistory.class));
+  }
+
+  @Test
+  void testSubRegionStateSaveHistory() {
+    State<PaymentState, PaymentEvent> source = mock(State.class);
+    State<PaymentState, PaymentEvent> target = mock(State.class);
+    when(source.getId()).thenReturn(PaymentState.FRAUD_EVALUATING);
+    when(target.getId()).thenReturn(PaymentState.FRAUD_PASSED);
+    when(stateContext.getSource()).thenReturn(source);
+    when(stateContext.getTarget()).thenReturn(target);
+    when(stateContext.getExtendedState()).thenReturn(extendedState);
+    when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+
+    interceptor.stateContext(stateContext);
+
+    verify(paymentHistoryRepository)
+        .save(argThat(history -> "FraudCheck".equals(history.getRegion())));
   }
 }

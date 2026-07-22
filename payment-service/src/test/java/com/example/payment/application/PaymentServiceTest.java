@@ -146,7 +146,7 @@ class PaymentServiceTest {
 
   @Test
   void testProcessEventPaymentNotFound() {
-    when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.empty());
+    when(paymentRepository.findById(1L)).thenReturn(Optional.empty());
 
     assertThrows(PaymentNotFoundException.class, () -> paymentService.processEvent(1L, AUTHORIZE));
   }
@@ -154,7 +154,7 @@ class PaymentServiceTest {
   @Test
   void testProcessEventFraudGuardBlocked() {
     Payment payment = Payment.builder().id(1L).state(NEW.name()).build();
-    when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(payment));
+    when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
 
     StateMachine<PaymentState, PaymentEvent> sm = setupBlockedMachine(NEW);
     ExtendedState extendedState = sm.getExtendedState();
@@ -193,7 +193,7 @@ class PaymentServiceTest {
   @Test
   void testProcessEventSuccess() {
     Payment payment = Payment.builder().id(1L).state(NEW.name()).build();
-    when(paymentRepository.findByIdWithLock(1L)).thenReturn(Optional.of(payment));
+    when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
 
     setupSuccessMachine();
     when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
