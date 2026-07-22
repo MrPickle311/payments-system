@@ -1,22 +1,26 @@
 package com.example.payment.application;
 
-import com.example.payment.application.service.PaymentService;
-import com.example.payments.common.sharedkernel.Money;
-import com.example.payment.domain.Payment;
-import com.example.payment.domain.PaymentHistory;
-import com.example.payment.domain.PaymentNotFoundException;
-import com.example.payment.domain.PaymentRepository;
-import com.example.payment.domain.PaymentHistoryRepository;
-import com.example.payment.application.saga.ParallelSagaJoinInterceptor;
-import com.example.payment.domain.InvalidTransitionException;
-import reactor.core.publisher.Mono;
-import com.example.payment.domain.enums.PaymentEvent;
-import com.example.payment.domain.enums.PaymentState;
 import com.example.payment.application.dto.CreatePaymentRequest;
 import com.example.payment.application.mapper.PaymentApplicationMapper;
-import com.example.payment.infrastructure.config.PaymentStateMachineInterceptor;
+import com.example.payment.application.saga.ParallelSagaJoinInterceptor;
+import com.example.payment.application.service.PaymentService;
+import com.example.payment.domain.InvalidTransitionException;
+import com.example.payment.domain.Payment;
+import com.example.payment.domain.PaymentHistory;
+import com.example.payment.domain.PaymentHistoryRepository;
+import com.example.payment.domain.PaymentNotFoundException;
+import com.example.payment.domain.PaymentRepository;
+import com.example.payment.domain.enums.PaymentEvent;
+import com.example.payment.domain.enums.PaymentState;
+import com.example.payment.infrastructure.config.PaymentHistoryInterceptor;
 import com.example.payment.infrastructure.config.PaymentStateMachinePersister;
 import com.example.payment.infrastructure.config.PaymentStateMachinePersistingInterceptor;
+import com.example.payment.infrastructure.statemachine.PaymentStateMachineManager;
+import com.example.payments.common.sharedkernel.Money;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,15 +29,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.statemachine.ExtendedState;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.StateMachineEventResult;
+import org.springframework.statemachine.access.StateMachineAccessor;
 import org.springframework.statemachine.config.StateMachineFactory;
 import org.springframework.statemachine.state.State;
-import org.springframework.statemachine.access.StateMachineAccessor;
 import reactor.core.publisher.Flux;
-
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import reactor.core.publisher.Mono;
 
 import static com.example.payment.domain.PaymentConstants.FRAUD_RISK;
 import static com.example.payment.domain.PaymentConstants.FRAUD_SCORE;
@@ -61,7 +61,7 @@ class PaymentServiceTest {
   @Mock
   private StateMachineFactory<PaymentState, PaymentEvent> stateMachineFactory;
   @Mock
-  private PaymentStateMachineInterceptor stateMachineInterceptor;
+  private PaymentHistoryInterceptor stateMachineInterceptor;
   @Mock
   private PaymentStateMachinePersister stateMachinePersister;
 
@@ -72,13 +72,16 @@ class PaymentServiceTest {
   @Mock
   private PaymentApplicationMapper paymentApplicationMapper;
 
+  private PaymentStateMachineManager stateMachineManager;
   private PaymentService paymentService;
 
   @BeforeEach
   void setUp() {
+    stateMachineManager =
+        new PaymentStateMachineManager(stateMachineFactory, stateMachineInterceptor,
+            stateMachinePersister, parallelSagaJoinInterceptor, persistingInterceptor);
     paymentService = new PaymentService(paymentRepository, paymentHistoryRepository,
-        stateMachineFactory, stateMachineInterceptor, stateMachinePersister,
-        parallelSagaJoinInterceptor, persistingInterceptor, paymentApplicationMapper);
+        paymentApplicationMapper, stateMachineManager);
   }
 
   private static final String TX1 = "tx1";
@@ -181,8 +184,6 @@ class PaymentServiceTest {
         mock(StateMachineEventResult.class);
     lenient().when(result.getResultType()).thenReturn(ACCEPTED);
     lenient().when(sm.sendEvent(any(Mono.class))).thenReturn(Flux.just(result));
-    lenient().when(sm.stopReactively()).thenReturn(Mono.empty());
-    lenient().when(sm.startReactively()).thenReturn(Mono.empty());
     StateMachineAccessor<PaymentState, PaymentEvent> accessor = mock(StateMachineAccessor.class);
     lenient().when(sm.getStateMachineAccessor()).thenReturn(accessor);
     ExtendedState extendedState = mock(ExtendedState.class);

@@ -10,10 +10,10 @@ import static com.example.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payment.domain.PaymentConstants.PROCESSING_FEE;
 
+import com.example.payment.application.saga.SagaContextProxy;
 import com.example.payment.domain.Payment;
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,10 +38,9 @@ public class PaymentStateMachinePersister
         .collect(Collectors.joining(COMMA));
     log.debug("[Persister] Persisting state {} for payment {}", stateStr, payment.getId());
     payment.setState(stateStr);
-    payment.setFraudScore(stateMachine.getExtendedState().get(FRAUD_SCORE, Integer.class));
-    payment.setFraudRisk(stateMachine.getExtendedState().get(FRAUD_RISK, String.class));
-    payment.setProcessingFee(stateMachine.getExtendedState().get(PROCESSING_FEE, BigDecimal.class));
-    payment.setNetAmount(stateMachine.getExtendedState().get(NET_AMOUNT, BigDecimal.class));
+    var proxy = SagaContextProxy.of(stateMachine);
+    payment.markFraudEvaluation(proxy.getFraudScore(), proxy.getFraudRisk());
+    payment.updateFinancialDetails(proxy.getProcessingFee(), proxy.getNetAmount());
   }
 
   @Override
@@ -52,11 +51,10 @@ public class PaymentStateMachinePersister
         payment.getId());
     StateMachineContext<PaymentState, PaymentEvent> ctx = createContext(stateNames,
         PaymentState.valueOf(stateNames[0]), createExtendedState(payment));
-    stateMachine.stopReactively().block();
-    stateMachine.getStateMachineAccessor()
-        .doWithRegion(access -> access.resetStateMachineReactively(ctx).block());
-    stateMachine.startReactively().block();
-    stateMachine.getExtendedState().getVariables().put(IS_RESTORING, Boolean.FALSE);
+    stateMachine.stop();
+    stateMachine.getStateMachineAccessor().doWithRegion(access -> access.resetStateMachine(ctx));
+    stateMachine.start();
+    SagaContextProxy.of(stateMachine).setIsRestoring(Boolean.FALSE);
     return stateMachine;
   }
 

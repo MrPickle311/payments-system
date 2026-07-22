@@ -27,7 +27,6 @@ public class PaymentController implements PaymentsApi {
 
   @Override
   public ResponseEntity<ApiPayment> createPayment(final ApiCreatePaymentRequest request) {
-
     final CreatePaymentRequest appRequest = new CreatePaymentRequest(request.getTransactionId(),
         request.getAmount(), request.getCurrency(), request.getSourceUserId(),
         request.getTargetUserId(), request.getSourceCurrency(), request.getTargetCurrency());

@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payment.domain.enums.PaymentEvent.COMPLETE;
 import static com.example.payment.domain.enums.PaymentEvent.FAIL;
 import static com.example.payment.domain.enums.PaymentState.AUTH_APPROVED;
@@ -98,7 +97,7 @@ public class ParallelSagaJoinInterceptor
 
   private void triggerCompletion(StateMachine<PaymentState, PaymentEvent> rootStateMachine,
       boolean anyFailed) {
-    Long paymentId = rootStateMachine.getExtendedState().get(PAYMENT_ID, Long.class);
+    Long paymentId = SagaContextProxy.of(rootStateMachine).getPaymentId();
     PaymentEvent event = anyFailed ? FAIL : COMPLETE;
     log.info("[JoinInterceptor] Triggering {} for paymentId={}", event, paymentId);
     CompletableFuture.runAsync(

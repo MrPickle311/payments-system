@@ -1,5 +1,6 @@
 package com.example.payment.infrastructure.config;
 
+import com.example.payment.application.saga.SagaContextProxy;
 import com.example.payment.domain.PaymentHistory;
 import com.example.payment.domain.PaymentHistoryRepository;
 import com.example.payment.domain.enums.PaymentEvent;
@@ -19,11 +20,11 @@ import static org.springframework.statemachine.StateContext.Stage.STATE_CHANGED;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class PaymentStateMachineInterceptor
+public class PaymentHistoryInterceptor
     extends StateMachineListenerAdapter<PaymentState, PaymentEvent> {
 
-  private static final String PAYMENT_ID = "paymentId";
-  private static final String IS_RESTORING = "isRestoring";
+  private static final String ROOT_REGION = "ROOT";
+  public static final String AUTO = "AUTO";
 
   private final PaymentHistoryRepository paymentHistoryRepository;
 
@@ -39,15 +40,14 @@ public class PaymentStateMachineInterceptor
     if (context.getSource() == null || context.getTarget() == null) {
       return;
     }
-    Long paymentId = context.getExtendedState().get(PAYMENT_ID, Long.class);
-    if (Boolean.TRUE.equals(context.getExtendedState().get(IS_RESTORING, Boolean.class))) {
+    var proxy = SagaContextProxy.of(context);
+    Long paymentId = proxy.getPaymentId();
+    if (Boolean.TRUE.equals(proxy.getIsRestoring())) {
       log.debug("[Interceptor] Skipping restoration: payment={}", paymentId);
       return;
     }
     savePaymentHistory(context, paymentId);
   }
-
-  private static final String ROOT_REGION = "ROOT";
 
   private void savePaymentHistory(StateContext<PaymentState, PaymentEvent> context,
       Long paymentId) {
@@ -59,10 +59,9 @@ public class PaymentStateMachineInterceptor
     log.info("[Interceptor] Record transition for payment {} [Region: {}]: {} --({})--> {}",
         paymentId, region, source, event, target);
 
-    PaymentHistory history =
-        PaymentHistory.builder().paymentId(paymentId).region(region).fromState(source.name())
-            .toState(target.name()).event(event != null ? event.name() : "AUTO")
-            .timestamp(LocalDateTime.now(ZoneId.systemDefault())).build();
+    PaymentHistory history = PaymentHistory.builder().paymentId(paymentId).region(region)
+        .fromState(source.name()).toState(target.name()).event(event != null ? event.name() : AUTO)
+        .timestamp(LocalDateTime.now(ZoneId.systemDefault())).build();
     paymentHistoryRepository.save(history);
   }
 

@@ -1,25 +1,23 @@
 package com.example.payment.domain;
 
+import com.example.payment.domain.enums.PaymentState;
 import com.example.payment.domain.event.PaymentCreatedEvent;
+import com.example.payment.domain.event.PaymentDomainEvent;
 import com.example.payment.domain.event.PaymentStateChangedEvent;
 import com.example.payments.common.sharedkernel.Money;
-
-import com.example.payment.domain.enums.PaymentState;
-import com.example.payment.domain.event.PaymentDomainEvent;
-import lombok.Getter;
-import lombok.AccessLevel;
-import lombok.ToString;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Setter;
-import org.jmolecules.ddd.annotation.AggregateRoot;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.jmolecules.ddd.annotation.AggregateRoot;
 
 @ToString
 @Getter
@@ -59,6 +57,22 @@ public class Payment {
     }
     String rootStateName = this.state.split(",")[0];
     return PaymentState.valueOf(rootStateName);
+  }
+
+  public boolean isTerminal() {
+    PaymentState current = currentState();
+    return current == PaymentState.COMPLETED || current == PaymentState.FAILED
+        || current == PaymentState.CANCELED || current == PaymentState.REFUNDED;
+  }
+
+  public void markFraudEvaluation(Integer score, String risk) {
+    this.fraudScore = score;
+    this.fraudRisk = risk;
+  }
+
+  public void updateFinancialDetails(BigDecimal fee, BigDecimal net) {
+    this.processingFee = fee;
+    this.netAmount = net;
   }
 
   public void publishStateChange(PaymentState oldState, PaymentState newState) {

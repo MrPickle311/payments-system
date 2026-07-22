@@ -2,18 +2,21 @@ package com.example.payment.application.saga;
 
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.statemachine.ExtendedState;
 import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.StateMachine;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import static com.example.payment.domain.PaymentConstants.AUTH_STATUS;
 import static com.example.payment.domain.PaymentConstants.FEE_AMOUNT;
 import static com.example.payment.domain.PaymentConstants.FEE_STATUS;
+import static com.example.payment.domain.PaymentConstants.FRAUD_RISK;
+import static com.example.payment.domain.PaymentConstants.FRAUD_SCORE;
 import static com.example.payment.domain.PaymentConstants.FRAUD_STATUS;
 import static com.example.payment.domain.PaymentConstants.IS_RESTORING;
 import static com.example.payment.domain.PaymentConstants.LIMITS_STATUS;
@@ -22,61 +25,86 @@ import static com.example.payment.domain.PaymentConstants.PAYMENT_AMOUNT;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_CREATED_AT;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
+import static com.example.payment.domain.PaymentConstants.PROCESSING_FEE;
 import static com.example.payment.domain.PaymentConstants.SANCTIONS_STATUS;
 import static com.example.payment.domain.PaymentConstants.SOURCE_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.SOURCE_USER_ID;
 import static com.example.payment.domain.PaymentConstants.TARGET_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.TARGET_USER_ID;
 
-@RequiredArgsConstructor(staticName = "of")
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
 public class SagaContextProxy {
 
-  private final StateContext<PaymentState, PaymentEvent> context;
+  private final ExtendedState extendedState;
+  private final StateMachine<PaymentState, PaymentEvent> stateMachine;
+
+  public static SagaContextProxy of(StateContext<PaymentState, PaymentEvent> context) {
+    return new SagaContextProxy(context != null ? context.getExtendedState() : null,
+        context != null ? context.getStateMachine() : null);
+  }
+
+  public static SagaContextProxy of(StateMachine<PaymentState, PaymentEvent> stateMachine) {
+    return new SagaContextProxy(stateMachine != null ? stateMachine.getExtendedState() : null,
+        stateMachine);
+  }
+
+  public static SagaContextProxy of(ExtendedState extendedState) {
+    return new SagaContextProxy(extendedState, null);
+  }
 
   public Long getPaymentId() {
-    return context.getExtendedState().get(PAYMENT_ID, Long.class);
+    return extendedState != null ? extendedState.get(PAYMENT_ID, Long.class) : null;
   }
 
   public String getPaymentAmount() {
-    Object val = context.getExtendedState().get(PAYMENT_AMOUNT, Object.class);
+    if (extendedState == null) {
+      return null;
+    }
+    Object val = extendedState.get(PAYMENT_AMOUNT, Object.class);
     return val != null ? String.valueOf(val) : null;
   }
 
   public void setPaymentAmount(String amount) {
-    context.getExtendedState().getVariables().put(PAYMENT_AMOUNT, amount);
+    if (extendedState != null) {
+      extendedState.getVariables().put(PAYMENT_AMOUNT, amount);
+    }
   }
 
   public String getPaymentCurrency() {
-    return context.getExtendedState().get(PAYMENT_CURRENCY, String.class);
+    return extendedState != null ? extendedState.get(PAYMENT_CURRENCY, String.class) : null;
   }
 
   public String getSourceCurrency() {
-    return context.getExtendedState().get(SOURCE_CURRENCY, String.class);
+    return extendedState != null ? extendedState.get(SOURCE_CURRENCY, String.class) : null;
   }
 
   public String getTargetCurrency() {
-    return context.getExtendedState().get(TARGET_CURRENCY, String.class);
+    return extendedState != null ? extendedState.get(TARGET_CURRENCY, String.class) : null;
   }
 
   public Long getSourceUserId() {
-    return context.getExtendedState().get(SOURCE_USER_ID, Long.class);
+    return extendedState != null ? extendedState.get(SOURCE_USER_ID, Long.class) : null;
   }
 
   public Long getTargetUserId() {
-    return context.getExtendedState().get(TARGET_USER_ID, Long.class);
+    return extendedState != null ? extendedState.get(TARGET_USER_ID, Long.class) : null;
   }
 
   public String getFeeAmount() {
-    return context.getExtendedState().get(FEE_AMOUNT, String.class);
+    return extendedState != null ? extendedState.get(FEE_AMOUNT, String.class) : null;
   }
 
   public void setFeeAmount(String feeAmount) {
-    context.getExtendedState().getVariables().put(FEE_AMOUNT, feeAmount);
+    if (extendedState != null) {
+      extendedState.getVariables().put(FEE_AMOUNT, feeAmount);
+    }
   }
 
   public void sendEvent(PaymentEvent event) {
-    sendEventWithRetries(context.getStateMachine(), event, getPaymentId());
+    if (stateMachine != null) {
+      sendEventWithRetries(stateMachine, event, getPaymentId());
+    }
   }
 
   public static void sendEventWithRetries(StateMachine<PaymentState, PaymentEvent> sm,
@@ -86,46 +114,80 @@ public class SagaContextProxy {
   }
 
   public LocalDateTime getPaymentCreatedAt() {
-    return context.getExtendedState().get(PAYMENT_CREATED_AT, LocalDateTime.class);
+    return extendedState != null ? extendedState.get(PAYMENT_CREATED_AT, LocalDateTime.class)
+        : null;
   }
 
   public BigDecimal getPaymentAmountAsBigDecimal() {
-    return new BigDecimal(context.getExtendedState().get(PAYMENT_AMOUNT, String.class));
+    String amt = extendedState != null ? extendedState.get(PAYMENT_AMOUNT, String.class) : null;
+    return amt != null ? new BigDecimal(amt) : null;
   }
 
   public BigDecimal getNetAmountAsBigDecimal() {
-    return context.getExtendedState().get(NET_AMOUNT, BigDecimal.class);
+    return extendedState != null ? extendedState.get(NET_AMOUNT, BigDecimal.class) : null;
   }
 
   public Boolean getIsRestoring() {
-    return context.getExtendedState().get(IS_RESTORING, Boolean.class);
+    return extendedState != null ? extendedState.get(IS_RESTORING, Boolean.class) : null;
+  }
+
+  public void setIsRestoring(Boolean isRestoring) {
+    if (extendedState != null) {
+      extendedState.getVariables().put(IS_RESTORING, isRestoring);
+    }
+  }
+
+  public Integer getFraudScore() {
+    return extendedState != null ? extendedState.get(FRAUD_SCORE, Integer.class) : null;
+  }
+
+  public String getFraudRisk() {
+    return extendedState != null ? extendedState.get(FRAUD_RISK, String.class) : null;
+  }
+
+  public BigDecimal getProcessingFee() {
+    return extendedState != null ? extendedState.get(PROCESSING_FEE, BigDecimal.class) : null;
+  }
+
+  public BigDecimal getNetAmount() {
+    return extendedState != null ? extendedState.get(NET_AMOUNT, BigDecimal.class) : null;
   }
 
   public void setAuthStatus(String status) {
-    context.getExtendedState().getVariables().put(AUTH_STATUS, status);
+    if (extendedState != null) {
+      extendedState.getVariables().put(AUTH_STATUS, status);
+    }
   }
 
   public void setFraudStatus(String status) {
-    context.getExtendedState().getVariables().put(FRAUD_STATUS, status);
+    if (extendedState != null) {
+      extendedState.getVariables().put(FRAUD_STATUS, status);
+    }
   }
 
   public String getLimitsStatus() {
-    return context.getExtendedState().get(LIMITS_STATUS, String.class);
+    return extendedState != null ? extendedState.get(LIMITS_STATUS, String.class) : null;
   }
 
   public void setLimitsStatus(String status) {
-    context.getExtendedState().getVariables().put(LIMITS_STATUS, status);
+    if (extendedState != null) {
+      extendedState.getVariables().put(LIMITS_STATUS, status);
+    }
   }
 
   public void setSanctionsStatus(String status) {
-    context.getExtendedState().getVariables().put(SANCTIONS_STATUS, status);
+    if (extendedState != null) {
+      extendedState.getVariables().put(SANCTIONS_STATUS, status);
+    }
   }
 
   public String getFeeStatus() {
-    return context.getExtendedState().get(FEE_STATUS, String.class);
+    return extendedState != null ? extendedState.get(FEE_STATUS, String.class) : null;
   }
 
   public void setFeeStatus(String status) {
-    context.getExtendedState().getVariables().put(FEE_STATUS, status);
+    if (extendedState != null) {
+      extendedState.getVariables().put(FEE_STATUS, status);
+    }
   }
 }

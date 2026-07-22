@@ -21,7 +21,7 @@ import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.state.State;
 
 @ExtendWith(MockitoExtension.class)
-class PaymentStateMachineInterceptorTest {
+class PaymentHistoryInterceptorTest {
   private static final String PAYMENT_ID_KEY = "paymentId";
   private static final String IS_RESTORING_KEY = "isRestoring";
 
@@ -32,11 +32,11 @@ class PaymentStateMachineInterceptorTest {
   @Mock
   private ExtendedState extendedState;
 
-  private PaymentStateMachineInterceptor interceptor;
+  private PaymentHistoryInterceptor interceptor;
 
   @BeforeEach
   void setUp() {
-    interceptor = new PaymentStateMachineInterceptor(paymentHistoryRepository);
+    interceptor = new PaymentHistoryInterceptor(paymentHistoryRepository);
     when(stateContext.getStage()).thenReturn(StateContext.Stage.STATE_CHANGED);
   }
 
