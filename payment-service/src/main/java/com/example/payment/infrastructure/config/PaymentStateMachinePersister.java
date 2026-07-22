@@ -89,11 +89,11 @@ public class PaymentStateMachinePersister
   private StateMachineContext<PaymentState, PaymentEvent> createContext(String[] stateNames,
       PaymentState storedState, DefaultExtendedState extendedState) {
     if (stateNames.length > 1) {
-      List<StateMachineContext<PaymentState, PaymentEvent>> childs = Arrays.stream(stateNames)
+      List<StateMachineContext<PaymentState, PaymentEvent>> children = Arrays.stream(stateNames)
           .skip(1).map(name -> new DefaultStateMachineContext<PaymentState, PaymentEvent>(
               PaymentState.valueOf(name), null, null, null))
           .collect(Collectors.toList());
-      return new DefaultStateMachineContext<>(childs, storedState, null, null, extendedState);
+      return new DefaultStateMachineContext<>(children, storedState, null, null, extendedState);
     }
     return new DefaultStateMachineContext<>(storedState, null, null, extendedState);
   }

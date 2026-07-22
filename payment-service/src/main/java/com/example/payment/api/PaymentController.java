@@ -13,9 +13,10 @@ import com.example.payment.application.service.PaymentService;
 import com.example.payment.application.dto.CreatePaymentRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.springframework.http.HttpStatus.CREATED;
 
 @SuppressWarnings("checkstyle:AbbreviationAsWordInName")
 @RestController
@@ -32,7 +33,7 @@ public class PaymentController implements PaymentsApi {
         request.getTargetUserId(), request.getSourceCurrency(), request.getTargetCurrency());
 
     final Payment created = paymentService.createPayment(appRequest);
-    return ResponseEntity.status(HttpStatus.CREATED).body(paymentMapper.toApi(created));
+    return ResponseEntity.status(CREATED).body(paymentMapper.toApi(created));
   }
 
   @Override
