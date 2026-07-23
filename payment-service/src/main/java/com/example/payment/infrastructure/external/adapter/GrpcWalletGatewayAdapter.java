@@ -1,5 +1,6 @@
 package com.example.payment.infrastructure.external.adapter;
 
+import com.example.payment.domain.gateway.WalletDebitCommand;
 import com.example.payment.domain.gateway.WalletGateway;
 import com.example.payments.wallet.grpc.DebitRequest;
 import com.example.payments.wallet.grpc.DebitResponse;
@@ -19,13 +20,12 @@ public class GrpcWalletGatewayAdapter implements WalletGateway {
   private final WalletServiceGrpc.WalletServiceBlockingStub walletService;
 
   @Override
-  public DebitResponse debit(Long paymentId, Long sourceUserId, Long targetUserId, String amount,
-      String currency) {
-    return walletService
-        .debit(DebitRequest.newBuilder().setPaymentId(paymentId != null ? paymentId : 0L)
-            .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
-            .setTargetUserId(targetUserId != null ? targetUserId : 0L)
-            .setAmount(amount != null ? amount : ZERO_AMOUNT)
-            .setCurrency(currency != null ? currency : EMPTY_STRING).build());
+  public DebitResponse debit(WalletDebitCommand command) {
+    return walletService.debit(DebitRequest.newBuilder()
+        .setPaymentId(command.paymentId() != null ? command.paymentId() : 0L)
+        .setSourceUserId(command.sourceUserId() != null ? command.sourceUserId() : 0L)
+        .setTargetUserId(command.targetUserId() != null ? command.targetUserId() : 0L)
+        .setAmount(command.amount() != null ? command.amount() : ZERO_AMOUNT)
+        .setCurrency(command.currency() != null ? command.currency() : EMPTY_STRING).build());
   }
 }

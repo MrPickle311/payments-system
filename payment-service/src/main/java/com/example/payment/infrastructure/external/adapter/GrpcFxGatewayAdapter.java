@@ -25,8 +25,7 @@ public class GrpcFxGatewayAdapter implements FxGateway {
         .processFx(FxRequest.newBuilder().setPaymentId(paymentId != null ? paymentId : 0L)
             .setAmount(amount != null ? amount : ZERO_AMOUNT)
             .setSourceCurrency(sourceCurrency != null ? sourceCurrency : EMPTY_STRING)
-            .setTargetCurrency(getTargetCurrency(sourceCurrency, targetCurrency))
-            .build());
+            .setTargetCurrency(getTargetCurrency(sourceCurrency, targetCurrency)).build());
   }
 
   private static String getTargetCurrency(String sourceCurrency, String targetCurrency) {

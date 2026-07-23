@@ -50,7 +50,7 @@ public class PaymentController implements PaymentsApi {
 
   @Override
   public ResponseEntity<Void> executePayment(final Long id) {
-    paymentService.initiatePayment(id);
+    paymentService.executePayment(id);
     return ResponseEntity.accepted().build();
   }
 }

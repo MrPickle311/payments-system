@@ -48,7 +48,7 @@ public class PaymentStateMachineManager {
 
   public PaymentState execute(Payment payment, PaymentEvent event) {
     StateMachine<PaymentState, PaymentEvent> sm =
-            stateMachineFactory.getStateMachine(UUID.randomUUID().toString());
+        stateMachineFactory.getStateMachine(UUID.randomUUID().toString());
     try {
       configureStateMachine(sm, payment);
       return processStateMachineEvent(sm, payment, event);
@@ -137,18 +137,14 @@ public class PaymentStateMachineManager {
   private void handleFraudGuardBlock(StateMachine<PaymentState, PaymentEvent> stateMachine,
       Payment payment) {
     var proxy = SagaContextProxy.of(stateMachine);
-    Integer fraudScore = proxy.getFraudScore();
-    String fraudRisk = proxy.getFraudRisk();
-    payment.markFraudEvaluation(fraudScore, fraudRisk);
-    log.warn(
-        "[Service] AUTHORIZE blocked by fraud guard (score={} risk={}) for payment={}. Auto-failing.",
-        fraudScore, fraudRisk, payment.getId());
-
+    Integer score = proxy.getFraudScore();
+    String risk = proxy.getFraudRisk();
+    payment.markFraudEvaluation(score, risk);
+    log.warn("[Service] AUTHORIZE blocked by fraud guard (score={} risk={}) for payment={}.", score,
+        risk, payment.getId());
     sendEventToStateMachine(stateMachine, FAIL);
     stateMachinePersister.persist(stateMachine, payment);
-
     throw new InvalidTransitionException(String.format(
-        "Payment [%d] rejected by fraud check (score=%d, risk=%s). Payment moved to FAILED.",
-        payment.getId(), fraudScore, fraudRisk));
+        "Payment [%d] rejected by fraud check (score=%d, risk=%s).", payment.getId(), score, risk));
   }
 }

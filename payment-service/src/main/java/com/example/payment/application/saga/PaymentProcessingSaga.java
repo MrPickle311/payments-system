@@ -9,6 +9,7 @@ import com.example.payment.domain.gateway.FraudGateway;
 import com.example.payment.domain.gateway.FxGateway;
 import com.example.payment.domain.gateway.LimitsGateway;
 import com.example.payment.domain.gateway.SanctionsGateway;
+import com.example.payment.domain.gateway.WalletDebitCommand;
 import com.example.payment.domain.gateway.WalletGateway;
 import com.example.payments.fee.grpc.FeeResponse;
 import com.example.payments.fraud.grpc.FraudResponse;
@@ -215,8 +216,8 @@ public class PaymentProcessingSaga {
     if (sourceCurrency == null) {
       sourceCurrency = proxy.getPaymentCurrency();
     }
-    return walletGateway.debit(proxy.getPaymentId(), proxy.getSourceUserId(), INTERNAL_FEE_USER_ID,
-        feeAmount, sourceCurrency);
+    return walletGateway.debit(new WalletDebitCommand(proxy.getPaymentId(), proxy.getSourceUserId(),
+        INTERNAL_FEE_USER_ID, feeAmount, sourceCurrency));
   }
 
   private void handleFeeChargeResponse(SagaContextProxy proxy, DebitResponse res) {
@@ -248,8 +249,8 @@ public class PaymentProcessingSaga {
       sourceCurrency = proxy.getPaymentCurrency();
     }
     try {
-      walletGateway.debit(proxy.getPaymentId(), INTERNAL_FEE_USER_ID, sourceUserId, feeAmount,
-          sourceCurrency);
+      walletGateway.debit(new WalletDebitCommand(proxy.getPaymentId(), INTERNAL_FEE_USER_ID,
+          sourceUserId, feeAmount, sourceCurrency));
       proxy.setFeeStatus(STATUS_FEE_REFUNDED);
     } catch (Exception ex) {
       log.error("Fee compensation failed for paymentId={}", proxy.getPaymentId(), ex);
@@ -282,8 +283,8 @@ public class PaymentProcessingSaga {
     if (targetCurrency == null) {
       targetCurrency = proxy.getPaymentCurrency();
     }
-    return walletGateway.debit(proxy.getPaymentId(), proxy.getSourceUserId(),
-        proxy.getTargetUserId(), proxy.getPaymentAmount(), targetCurrency);
+    return walletGateway.debit(new WalletDebitCommand(proxy.getPaymentId(), proxy.getSourceUserId(),
+        proxy.getTargetUserId(), proxy.getPaymentAmount(), targetCurrency));
   }
 
   public void completedEntry(StateContext<PaymentState, PaymentEvent> context) {
