@@ -57,21 +57,24 @@ public class PaymentService {
         return payment;
     }
 
-  @Transactional(noRollbackFor = InvalidTransitionException.class)
-  @Observed(name = "initiate-payment")
-  public void initiatePayment(Long paymentId) {
-    processEvent(paymentId, INITIATE);
-  }
+    @Transactional(noRollbackFor = InvalidTransitionException.class)
+    public void executePayment(Long paymentId) {
+        processEvent(paymentId, INITIATE);
+    }
 
-  @Observed(name = "process-payment-event")
-  public Payment processEvent(@SpanTag("payment.id") Long paymentId, PaymentEvent event) {
-    Payment payment = paymentRepository.findById(paymentId)
-        .orElseThrow(() -> new PaymentNotFoundException(paymentId));
-    log.info("[Service] Processing event={} for payment={} (currentState={})", event, paymentId,
-        payment.getState());
-    stateMachineManager.execute(payment, event);
-    return savePayment(paymentId, payment);
-  }
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 50))
+    @Observed(name = "process-payment-event")
+    public Payment processEvent(@SpanTag("payment.id") Long paymentId, PaymentEvent event) {
+        Payment payment =
+                paymentRepository.findById(paymentId).orElseThrow(() -> new PaymentNotFoundException(paymentId));
+        log.info(
+                "[Service] Processing event={} for payment={} (currentState={})", event, paymentId, payment.getState());
+        stateMachineManager.execute(payment, event);
+        return savePayment(paymentId, payment);
+    }
 
     private Payment savePayment(Long paymentId, Payment payment) {
         Payment saved = paymentRepository.save(payment);
@@ -85,12 +88,22 @@ public class PaymentService {
         return paymentRepository.findById(paymentId).orElseThrow(() -> new PaymentNotFoundException(paymentId));
     }
 
-  @Transactional(readOnly = true)
-  @Observed(name = "get-payment-history")
-  public List<PaymentHistory> getPaymentHistory(@SpanTag("payment.id") Long paymentId) {
-    if (!paymentRepository.existsById(paymentId)) {
-      throw new PaymentNotFoundException(paymentId);
+    @Transactional(readOnly = true)
+    @Observed(name = "get-payment-history")
+    public List<PaymentHistory> getPaymentHistory(@SpanTag("payment.id") Long paymentId) {
+        if (!paymentRepository.existsById(paymentId)) {
+            throw new PaymentNotFoundException(paymentId);
+        }
+        return paymentHistoryRepository.findByPaymentIdOrderByTimestampAsc(paymentId);
     }
-    return paymentHistoryRepository.findByPaymentIdOrderByTimestampAsc(paymentId);
-  }
+
+    @Transactional(noRollbackFor = InvalidTransitionException.class)
+    public void forceTimeout(Long paymentId) {
+        Payment payment =
+                paymentRepository.findById(paymentId).orElseThrow(() -> new PaymentNotFoundException(paymentId));
+        if (!"PROCESSING".equals(payment.getState())) return;
+        log.warn("[Timeout] Forcing FAIL for stuck paymentId={}", paymentId);
+        stateMachineManager.execute(payment, PaymentEvent.FAIL);
+        savePayment(paymentId, payment);
+    }
 }
