@@ -1,14 +1,13 @@
 package com.example.payment.domain;
 
-import lombok.Getter;
-import lombok.ToString;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import org.jmolecules.ddd.annotation.Entity;
-
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.jmolecules.ddd.annotation.Entity;
 
 @ToString
 @Getter
@@ -18,15 +17,16 @@ import java.time.ZoneId;
 @Entity
 public class PaymentHistory {
 
-  private Long id;
-  private Long paymentId;
+    private Long id;
+    private Long paymentId;
 
-  @Builder.Default
-  private String region = "ROOT";
-  private String fromState;
-  private String toState;
-  private String event;
+    @Builder.Default
+    private String region = "ROOT";
 
-  @Builder.Default
-  private LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
+    private String fromState;
+    private String toState;
+    private String event;
+
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
 }
