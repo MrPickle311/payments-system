@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class LedgerRepositoryAdapter implements LedgerRepository {
 
-  private final LedgerEntryRepository repository;
+    private final LedgerEntryRepository repository;
 
-  @Override
-  public LedgerEntry save(LedgerEntry entry) {
-    return repository.save(entry);
-  }
+    @Override
+    public LedgerEntry save(LedgerEntry entry) {
+        return repository.save(entry);
+    }
 }
