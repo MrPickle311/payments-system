@@ -1,9 +1,15 @@
 package com.example.payment.domain.gateway;
 
-public record WalletDebitCommand(
-        Long paymentId,
-        Long sourceUserId,
-        Long targetUserId,
-        String amount,
-        String currency,
-        String idempotencyKey) {}
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class WalletDebitCommand {
+    private Long paymentId;
+    private Long sourceUserId;
+    private Long targetUserId;
+    private String amount;
+    private String currency;
+    private String idempotencyKey;
+}

@@ -29,13 +29,13 @@ public class GrpcWalletGatewayAdapter implements WalletGateway {
         return walletService
                 .withDeadlineAfter(3, TimeUnit.SECONDS)
                 .debit(DebitRequest.newBuilder()
-                        .setPaymentId(command.paymentId() != null ? command.paymentId() : 0L)
-                        .setSourceUserId(command.sourceUserId() != null ? command.sourceUserId() : 0L)
-                        .setTargetUserId(command.targetUserId() != null ? command.targetUserId() : 0L)
-                        .setAmount(command.amount() != null ? command.amount() : ZERO_AMOUNT)
-                        .setCurrency(command.currency() != null ? command.currency() : EMPTY_STRING)
-                        .setIdempotencyKey(command.idempotencyKey() != null ? command.idempotencyKey() : EMPTY_STRING)
+                        .setPaymentId(command.getPaymentId() != null ? command.getPaymentId() : 0L)
+                        .setSourceUserId(command.getSourceUserId() != null ? command.getSourceUserId() : 0L)
+                        .setTargetUserId(command.getTargetUserId() != null ? command.getTargetUserId() : 0L)
+                        .setAmount(command.getAmount() != null ? command.getAmount() : ZERO_AMOUNT)
+                        .setCurrency(command.getCurrency() != null ? command.getCurrency() : EMPTY_STRING)
+                        .setIdempotencyKey(
+                                command.getIdempotencyKey() != null ? command.getIdempotencyKey() : EMPTY_STRING)
                         .build());
     }
 }
-
