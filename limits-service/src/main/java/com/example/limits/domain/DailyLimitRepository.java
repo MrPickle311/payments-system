@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 public interface DailyLimitRepository {
-  Optional<DailyLimit> findByUserIdAndDate(Long userId, LocalDate date);
+    Optional<DailyLimit> findByUserIdAndDate(Long userId, LocalDate date);
 
-  DailyLimit save(DailyLimit limit);
+    DailyLimit save(DailyLimit limit);
 }
