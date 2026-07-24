@@ -19,10 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 public class PaymentStateMachinePersistingInterceptor
-    extends StateMachineInterceptorAdapter<PaymentState, PaymentEvent> {
+        extends StateMachineInterceptorAdapter<PaymentState, PaymentEvent> {
 
-  private final PaymentRepository paymentRepository;
-  private final PaymentStateMachinePersister persister;
+    private final PaymentRepository paymentRepository;
+    private final PaymentStateMachinePersister persister;
 
   @Override
   @Transactional
@@ -31,23 +31,21 @@ public class PaymentStateMachinePersistingInterceptor
       StateMachine<PaymentState, PaymentEvent> stateMachine,
       StateMachine<PaymentState, PaymentEvent> rootStateMachine) {
 
-    if (stateMachine != rootStateMachine) {
-      return;
+        if (stateMachine != rootStateMachine) {
+            return;
+        }
+
+        Long paymentId = SagaContextProxy.of(rootStateMachine).getPaymentId();
+        if (paymentId != null) {
+            savePaymentState(rootStateMachine, paymentId);
+        }
     }
 
-    Long paymentId = SagaContextProxy.of(rootStateMachine).getPaymentId();
-    if (paymentId != null) {
-      savePaymentState(rootStateMachine, paymentId);
+    private void savePaymentState(StateMachine<PaymentState, PaymentEvent> rootStateMachine, Long paymentId) {
+        paymentRepository.findById(paymentId).ifPresent(payment -> {
+            persister.persist(rootStateMachine, payment);
+            Payment saved = paymentRepository.save(payment);
+            log.info("[PersistingInterceptor] Saved state {} for payment {}", saved.getState(), paymentId);
+        });
     }
-  }
-
-  private void savePaymentState(StateMachine<PaymentState, PaymentEvent> rootStateMachine,
-      Long paymentId) {
-    paymentRepository.findById(paymentId).ifPresent(payment -> {
-      persister.persist(rootStateMachine, payment);
-      Payment saved = paymentRepository.save(payment);
-      log.info("[PersistingInterceptor] Saved state {} for payment {}", saved.getState(),
-          paymentId);
-    });
-  }
 }
