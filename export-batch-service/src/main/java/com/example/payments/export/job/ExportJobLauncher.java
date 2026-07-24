@@ -16,18 +16,19 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ExportJobLauncher {
 
-  private final JobLauncher jobLauncher;
-  private final Job exportLedgerJob;
+    private final JobLauncher jobLauncher;
+    private final Job exportLedgerJob;
 
-  @Scheduled(cron = "${export.schedule:0/30 * * * * *}")
-  public void launchJob() {
-    log.info("[JobLauncher] Triggering exportLedgerJob...");
-    try {
-      JobParameters params =
-          new JobParametersBuilder().addLong("time", System.currentTimeMillis()).toJobParameters();
-      jobLauncher.run(exportLedgerJob, params);
-    } catch (Exception exception) {
-      log.error("[JobLauncher] Job failed to start: {}", exception.getMessage());
+    @Scheduled(cron = "${export.schedule:0/30 * * * * *}")
+    public void launchJob() {
+        log.info("[JobLauncher] Triggering exportLedgerJob...");
+        try {
+            JobParameters params = new JobParametersBuilder()
+                    .addLong("time", System.currentTimeMillis())
+                    .toJobParameters();
+            jobLauncher.run(exportLedgerJob, params);
+        } catch (Exception exception) {
+            log.error("[JobLauncher] Job failed to start: {}", exception.getMessage());
+        }
     }
-  }
 }

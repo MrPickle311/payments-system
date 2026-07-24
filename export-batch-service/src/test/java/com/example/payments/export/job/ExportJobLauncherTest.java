@@ -11,26 +11,26 @@ import org.springframework.batch.core.launch.JobLauncher;
 
 class ExportJobLauncherTest {
 
-  @Test
-  void testLaunchJob() throws Exception {
-    JobLauncher launcher = mock(JobLauncher.class);
-    Job job = mock(Job.class);
+    @Test
+    void testLaunchJob() throws Exception {
+        JobLauncher launcher = mock(JobLauncher.class);
+        Job job = mock(Job.class);
 
-    ExportJobLauncher exportLauncher = new ExportJobLauncher(launcher, job);
-    exportLauncher.launchJob();
+        ExportJobLauncher exportLauncher = new ExportJobLauncher(launcher, job);
+        exportLauncher.launchJob();
 
-    verify(launcher).run(any(), any());
-  }
+        verify(launcher).run(any(), any());
+    }
 
-  @Test
-  void testLaunchJobException() throws Exception {
-    JobLauncher launcher = mock(JobLauncher.class);
-    Job job = mock(Job.class);
-    when(launcher.run(any(), any())).thenThrow(new RuntimeException("failed"));
+    @Test
+    void testLaunchJobException() throws Exception {
+        JobLauncher launcher = mock(JobLauncher.class);
+        Job job = mock(Job.class);
+        when(launcher.run(any(), any())).thenThrow(new RuntimeException("failed"));
 
-    ExportJobLauncher exportLauncher = new ExportJobLauncher(launcher, job);
-    exportLauncher.launchJob();
+        ExportJobLauncher exportLauncher = new ExportJobLauncher(launcher, job);
+        exportLauncher.launchJob();
 
-    verify(launcher).run(any(), any());
-  }
+        verify(launcher).run(any(), any());
+    }
 }
