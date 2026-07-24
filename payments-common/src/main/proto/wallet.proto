@@ -15,6 +15,7 @@ message DebitRequest {
   int64 target_user_id = 3;
   string amount = 4;
   string currency = 5;
+  string idempotency_key = 6;
 }
 
 message DebitResponse {
