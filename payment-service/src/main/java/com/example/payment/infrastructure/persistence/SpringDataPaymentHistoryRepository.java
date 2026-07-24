@@ -1,13 +1,11 @@
 package com.example.payment.infrastructure.persistence;
 
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public interface SpringDataPaymentHistoryRepository
-    extends JpaRepository<PaymentHistoryJpaEntity, Long> {
+public interface SpringDataPaymentHistoryRepository extends JpaRepository<PaymentHistoryJpaEntity, Long> {
 
-  List<PaymentHistoryJpaEntity> findByPaymentIdOrderByTimestampAsc(Long paymentId);
+    List<PaymentHistoryJpaEntity> findByPaymentIdOrderByTimestampAsc(Long paymentId);
 }
