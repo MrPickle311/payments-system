@@ -20,42 +20,44 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RegulatoryServiceTest {
 
-  @Mock
-  private RegulatoryProperties properties;
+    @Mock
+    private RegulatoryProperties properties;
 
-  @InjectMocks
-  private RegulatoryService service;
+    @InjectMocks
+    private RegulatoryService service;
 
-  private RegulatoryReportDto request;
+    private RegulatoryReportDto request;
 
-  @BeforeEach
-  void setUp() {
-    request = RegulatoryReportDto.builder().reportId("report-123")
-        .payments(List.of(RegulatoryReportDto.ExportedPaymentDto.builder().build())).build();
-  }
+    @BeforeEach
+    void setUp() {
+        request = RegulatoryReportDto.builder()
+                .reportId("report-123")
+                .payments(
+                        List.of(RegulatoryReportDto.ExportedPaymentDto.builder().build()))
+                .build();
+    }
 
-  @Test
-  void testProcessReportSuccess() {
-    when(properties.getFailureRate()).thenReturn(0.0);
-    String response = service.processReport(request);
-    assertEquals(ACCEPTED_RESPONSE, response);
-  }
+    @Test
+    void testProcessReportSuccess() {
+        when(properties.getFailureRate()).thenReturn(0.0);
+        String response = service.processReport(request);
+        assertEquals(ACCEPTED_RESPONSE, response);
+    }
 
-  @Test
-  void testProcessReportDuplicate() {
-    when(properties.getFailureRate()).thenReturn(0.0);
-    service.processReport(request);
+    @Test
+    void testProcessReportDuplicate() {
+        when(properties.getFailureRate()).thenReturn(0.0);
+        service.processReport(request);
 
-    String response = service.processReport(request);
-    assertEquals(DUPLICATE_RESPONSE, response);
-  }
+        String response = service.processReport(request);
+        assertEquals(DUPLICATE_RESPONSE, response);
+    }
 
-  @Test
-  void testProcessReportChaosMode() {
-    when(properties.getFailureRate()).thenReturn(1.0);
+    @Test
+    void testProcessReportChaosMode() {
+        when(properties.getFailureRate()).thenReturn(1.0);
 
-    IllegalStateException ex =
-        assertThrows(IllegalStateException.class, () -> service.processReport(request));
-    assertEquals(CHAOS_RESPONSE, ex.getMessage());
-  }
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.processReport(request));
+        assertEquals(CHAOS_RESPONSE, ex.getMessage());
+    }
 }
