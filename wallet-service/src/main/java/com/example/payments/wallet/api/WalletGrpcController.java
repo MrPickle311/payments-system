@@ -14,17 +14,21 @@ import net.devh.boot.grpc.server.service.GrpcService;
 @RequiredArgsConstructor
 public class WalletGrpcController extends WalletServiceGrpc.WalletServiceImplBase {
 
-  private final WalletService walletService;
+    private final WalletService walletService;
 
-  @Override
-  public void debit(DebitRequest request, StreamObserver<DebitResponse> responseObserver) {
-    log.info("[WalletGrpc] Debit paymentId={} from userId={} to userId={} amount={} {}",
-        request.getPaymentId(), request.getSourceUserId(), request.getTargetUserId(),
-        request.getAmount(), request.getCurrency());
+    @Override
+    public void debit(DebitRequest request, StreamObserver<DebitResponse> responseObserver) {
+        log.info(
+                "[WalletGrpc] Debit paymentId={} from userId={} to userId={} amount={} {}",
+                request.getPaymentId(),
+                request.getSourceUserId(),
+                request.getTargetUserId(),
+                request.getAmount(),
+                request.getCurrency());
 
-    String status = walletService.debitBetweenUsers(request);
+        String status = walletService.debitBetweenUsers(request);
 
-    responseObserver.onNext(DebitResponse.newBuilder().setStatus(status).build());
-    responseObserver.onCompleted();
-  }
+        responseObserver.onNext(DebitResponse.newBuilder().setStatus(status).build());
+        responseObserver.onCompleted();
+    }
 }

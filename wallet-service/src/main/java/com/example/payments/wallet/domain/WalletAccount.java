@@ -1,12 +1,11 @@
 package com.example.payments.wallet.domain;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -14,8 +13,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class WalletAccount {
-  private Long id;
-  private Long userId;
-  private BigDecimal balance;
-  private String currency;
+    private Long id;
+    private Long userId;
+    private Long version;
+    private BigDecimal balance;
+    private String currency;
 }
