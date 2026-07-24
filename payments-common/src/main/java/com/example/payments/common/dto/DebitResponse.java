@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DebitResponse {
-  private String status;
-  private String referenceId;
+    private String status;
+    private String referenceId;
 }
