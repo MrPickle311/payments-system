@@ -19,7 +19,7 @@ public class WebhookService {
     kafkaTemplate.send("payment-webhooks", String.valueOf(paymentId), payload);
   }
 
-  private static String toJsonPayload(Long paymentId, String status) {
-    return String.format("{\"paymentId\":%d,\"status\":\"%s\"}", paymentId, status);
-  }
+    private static String toJsonPayload(Long paymentId, String status) {
+        return String.format("{\"paymentId\":%d,\"status\":\"%s\"}", paymentId, status);
+    }
 }
