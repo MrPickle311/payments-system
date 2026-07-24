@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class SanctionsApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(SanctionsApplication.class, args);
-  }
+    public static void main(String[] args) {
+        SpringApplication.run(SanctionsApplication.class, args);
+    }
 }
