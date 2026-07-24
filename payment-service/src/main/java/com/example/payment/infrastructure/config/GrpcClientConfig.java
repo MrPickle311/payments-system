@@ -14,45 +14,45 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GrpcClientConfig {
 
-  @Bean
-  public FraudServiceGrpc.FraudServiceBlockingStub fraudCheckService(
-      @GrpcClient("fraud-service") FraudServiceGrpc.FraudServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public FraudServiceGrpc.FraudServiceBlockingStub fraudCheckService(
+            @GrpcClient("fraud-service") FraudServiceGrpc.FraudServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public AuthorizationServiceGrpc.AuthorizationServiceBlockingStub authorizationService(
-      @GrpcClient("authorization-service") AuthorizationServiceGrpc.AuthorizationServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public AuthorizationServiceGrpc.AuthorizationServiceBlockingStub authorizationService(
+            @GrpcClient("authorization-service") AuthorizationServiceGrpc.AuthorizationServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public LimitsServiceGrpc.LimitsServiceBlockingStub limitsService(
-      @GrpcClient("limits-service") LimitsServiceGrpc.LimitsServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public LimitsServiceGrpc.LimitsServiceBlockingStub limitsService(
+            @GrpcClient("limits-service") LimitsServiceGrpc.LimitsServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public SanctionsServiceGrpc.SanctionsServiceBlockingStub sanctionsService(
-      @GrpcClient("sanctions-service") SanctionsServiceGrpc.SanctionsServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public SanctionsServiceGrpc.SanctionsServiceBlockingStub sanctionsService(
+            @GrpcClient("sanctions-service") SanctionsServiceGrpc.SanctionsServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public FxServiceGrpc.FxServiceBlockingStub fxService(
-      @GrpcClient("fx-service") FxServiceGrpc.FxServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public FxServiceGrpc.FxServiceBlockingStub fxService(
+            @GrpcClient("fx-service") FxServiceGrpc.FxServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public FeeServiceGrpc.FeeServiceBlockingStub feeService(
-      @GrpcClient("fee-service") FeeServiceGrpc.FeeServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public FeeServiceGrpc.FeeServiceBlockingStub feeService(
+            @GrpcClient("fee-service") FeeServiceGrpc.FeeServiceBlockingStub stub) {
+        return stub;
+    }
 
-  @Bean
-  public WalletServiceGrpc.WalletServiceBlockingStub walletService(
-      @GrpcClient("wallet-service") WalletServiceGrpc.WalletServiceBlockingStub stub) {
-    return stub;
-  }
+    @Bean
+    public WalletServiceGrpc.WalletServiceBlockingStub walletService(
+            @GrpcClient("wallet-service") WalletServiceGrpc.WalletServiceBlockingStub stub) {
+        return stub;
+    }
 }
