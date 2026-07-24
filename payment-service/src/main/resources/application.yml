@@ -62,6 +62,30 @@ wallet:
   service:
     url: ${WALLET_SERVICE_URL:http://localhost:8081}
 
+grpc:
+  client:
+    authorization-service:
+      address: ${GRPC_AUTHORIZATION_SERVICE_ADDRESS:static://authorization-service:9091}
+      negotiation-type: ${GRPC_AUTHORIZATION_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fee-service:
+      address: ${GRPC_FEE_SERVICE_ADDRESS:static://fee-service:9091}
+      negotiation-type: ${GRPC_FEE_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fraud-service:
+      address: ${GRPC_FRAUD_SERVICE_ADDRESS:static://fraud-service:9091}
+      negotiation-type: ${GRPC_FRAUD_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fx-service:
+      address: ${GRPC_FX_SERVICE_ADDRESS:static://fx-service:9091}
+      negotiation-type: ${GRPC_FX_SERVICE_NEGOTIATION_TYPE:plaintext}
+    limits-service:
+      address: ${GRPC_LIMITS_SERVICE_ADDRESS:static://limits-service:9091}
+      negotiation-type: ${GRPC_LIMITS_SERVICE_NEGOTIATION_TYPE:plaintext}
+    sanctions-service:
+      address: ${GRPC_SANCTIONS_SERVICE_ADDRESS:static://sanctions-service:9091}
+      negotiation-type: ${GRPC_SANCTIONS_SERVICE_NEGOTIATION_TYPE:plaintext}
+    wallet-service:
+      address: ${GRPC_WALLET_SERVICE_ADDRESS:static://wallet-service:9090}
+      negotiation-type: ${GRPC_WALLET_SERVICE_NEGOTIATION_TYPE:plaintext}
+
 logging:
   level:
     com.example.payments: DEBUG
