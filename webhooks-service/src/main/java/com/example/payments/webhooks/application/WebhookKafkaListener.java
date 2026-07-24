@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class WebhookKafkaListener {
 
-  @KafkaListener(topics = "payment-webhooks", groupId = "webhooks-group")
-  public void consumeWebhookEvent(String payload) {
-    log.info("[WebhookService] Received webhook event from Kafka: {}", payload);
-    log.info("[WebhookService] Successfully pushed webhook to external system.");
-  }
+    @KafkaListener(topics = "payment-webhooks", groupId = "webhooks-group")
+    public void consumeWebhookEvent(String payload) {
+        log.info("[WebhookService] Received webhook event from Kafka: {}", payload);
+        log.info("[WebhookService] Successfully pushed webhook to external system.");
+    }
 }
