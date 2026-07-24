@@ -6,6 +6,8 @@ import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 import com.example.payments.wallet.application.port.WalletAccountPort;
 import com.example.payments.wallet.domain.WalletAccount;
 import com.example.payments.wallet.grpc.DebitRequest;
+import com.example.payments.wallet.infrastructure.persistence.IdempotencyKeyEntity;
+import com.example.payments.wallet.infrastructure.persistence.IdempotencyRepository;
 import io.micrometer.observation.annotation.Observed;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
@@ -20,20 +22,40 @@ public class WalletService {
 
     public static final BigDecimal DEFAULT_MOCK_BALANCE = new BigDecimal("1000.00");
     private final WalletAccountPort walletAccountPort;
+    private final IdempotencyRepository idempotencyRepository;
 
     @Transactional
     @Observed(name = "debit-between-users")
     public String debitBetweenUsers(DebitRequest request) {
+        String key = request.getIdempotencyKey();
+        if (!key.isBlank()) {
+            var existing = idempotencyRepository.findById(key);
+            if (existing.isPresent()) {
+                log.warn("[WalletService] Duplicate debit, returning cached status for key={}", key);
+                return existing.get().getStatus();
+            }
+        }
+
         BigDecimal amount = parseAmount(request.getAmount(), request.getPaymentId());
         if (amount == null) {
-            return STATUS_INSUFFICIENT_FUNDS;
+            return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }
-        WalletAccount sourceWalletAccount = getOrCreateAccount(request.getSourceUserId(), request.getCurrency());
+        WalletAccount sourceWalletAccount = getOrCreateAccountForUpdate(request.getSourceUserId(), request.getCurrency());
         if (sourceWalletAccount.getBalance().compareTo(amount) < 0) {
-            return STATUS_INSUFFICIENT_FUNDS;
+            return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }
         transferMoney(sourceWalletAccount, request.getTargetUserId(), amount, request.getCurrency());
-        return STATUS_SUCCESS;
+        return saveIdempotencyAndReturn(key, STATUS_SUCCESS);
+    }
+
+    private String saveIdempotencyAndReturn(String key, String status) {
+        if (!key.isBlank()) {
+            idempotencyRepository.save(IdempotencyKeyEntity.builder()
+                    .idempotencyKey(key)
+                    .status(status)
+                    .build());
+        }
+        return status;
     }
 
     private BigDecimal parseAmount(String amount, Long paymentId) {
@@ -45,18 +67,17 @@ public class WalletService {
         }
     }
 
-    //TODO: it should become atomic
     private void transferMoney(WalletAccount source, long targetId, BigDecimal amount, String currency) {
         source.setBalance(source.getBalance().subtract(amount));
         walletAccountPort.save(source);
-        WalletAccount target = getOrCreateAccount(targetId, currency);
+        WalletAccount target = getOrCreateAccountForUpdate(targetId, currency);
         target.setBalance(target.getBalance().add(amount));
         walletAccountPort.save(target);
     }
 
-    private WalletAccount getOrCreateAccount(long userId, String currency) {
+    private WalletAccount getOrCreateAccountForUpdate(long userId, String currency) {
         return walletAccountPort
-                .findByUserIdAndCurrency(userId, currency)
+                .findByUserIdAndCurrencyForUpdate(userId, currency)
                 .orElseGet(() -> createMockAccount(userId, currency));
     }
 
