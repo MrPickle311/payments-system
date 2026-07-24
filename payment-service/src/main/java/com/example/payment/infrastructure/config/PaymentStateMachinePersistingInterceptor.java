@@ -8,6 +8,9 @@ import com.example.payment.domain.enums.PaymentState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.state.State;
 import org.springframework.statemachine.support.StateMachineInterceptorAdapter;
@@ -24,12 +27,18 @@ public class PaymentStateMachinePersistingInterceptor
     private final PaymentRepository paymentRepository;
     private final PaymentStateMachinePersister persister;
 
-  @Override
-  @Transactional
-  public void postStateChange(State<PaymentState, PaymentEvent> state,
-      Message<PaymentEvent> message, Transition<PaymentState, PaymentEvent> transition,
-      StateMachine<PaymentState, PaymentEvent> stateMachine,
-      StateMachine<PaymentState, PaymentEvent> rootStateMachine) {
+    @Override
+    @Transactional
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 50))
+    public void postStateChange(
+            State<PaymentState, PaymentEvent> state,
+            Message<PaymentEvent> message,
+            Transition<PaymentState, PaymentEvent> transition,
+            StateMachine<PaymentState, PaymentEvent> stateMachine,
+            StateMachine<PaymentState, PaymentEvent> rootStateMachine) {
 
         if (stateMachine != rootStateMachine) {
             return;
