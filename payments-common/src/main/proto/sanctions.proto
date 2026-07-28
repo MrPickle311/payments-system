@@ -6,7 +6,7 @@ option java_multiple_files = true;
 option java_package = "com.example.payments.sanctions.grpc";
 
 service SanctionsService {
-  rpc CheckSanctions (SanctionsRequest) returns (SanctionsResponse);
+  rpc GetSanctionedUserIds (GetSanctionedUserIdsRequest) returns (SanctionedUserIdsResponse);
 }
 
 message SanctionsRequest {
@@ -17,4 +17,10 @@ message SanctionsRequest {
 
 message SanctionsResponse {
   bool success = 1;
+}
+
+message GetSanctionedUserIdsRequest {}
+
+message SanctionedUserIdsResponse {
+  repeated int64 sanctioned_user_ids = 1;
 }
