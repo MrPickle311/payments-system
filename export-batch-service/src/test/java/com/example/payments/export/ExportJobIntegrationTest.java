@@ -57,7 +57,8 @@ import org.springframework.web.client.RestTemplate;
             "spring.datasource.password=",
             "spring.jpa.database-platform=org.hibernate.dialect." + "H2Dialect",
             "spring.batch.jdbc.initialize-schema=always",
-            "export.schedule=-"
+            "export.schedule=-",
+            "spring.kafka.consumer.auto-offset-reset=earliest"
         })
 @SpringBatchTest
 @EmbeddedKafka(
