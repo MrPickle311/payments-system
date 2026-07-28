@@ -36,4 +36,7 @@ public class DailyLimitRecordEntity {
 
     @Column(name = "amount_used", nullable = false, precision = 19, scale = 4)
     private BigDecimal amountUsed;
+
+    @jakarta.persistence.Version
+    private Long version;
 }

@@ -25,13 +25,15 @@ public class LimitsGrpcService extends LimitsServiceGrpc.LimitsServiceImplBase {
     public void checkLimits(LimitsRequest request, StreamObserver<LimitsResponse> responseObserver) {
         long sourceUserId = request.getSourceUserId();
         BigDecimal amount = parseAmount(request.getAmount());
+        String idempotencyKey = request.getIdempotencyKey();
         log.info(
-                "[LimitsGrpc] CheckLimits paymentId={} userId={} amount={}",
+                "[LimitsGrpc] CheckLimits paymentId={} userId={} amount={} idempotencyKey={}",
                 request.getPaymentId(),
                 sourceUserId,
-                amount);
+                amount,
+                idempotencyKey);
 
-        boolean allowed = limitsService.checkAndConsume(sourceUserId, amount);
+        boolean allowed = limitsService.checkAndConsume(sourceUserId, amount, idempotencyKey);
         responseObserver.onNext(LimitsResponse.newBuilder().setSuccess(allowed).build());
         responseObserver.onCompleted();
     }
@@ -40,13 +42,15 @@ public class LimitsGrpcService extends LimitsServiceGrpc.LimitsServiceImplBase {
     public void releaseLimit(ReleaseLimitRequest request, StreamObserver<ReleaseLimitResponse> responseObserver) {
         long sourceUserId = request.getSourceUserId();
         BigDecimal amount = parseAmount(request.getAmount());
+        String idempotencyKey = request.getIdempotencyKey();
         log.info(
-                "[LimitsGrpc] ReleaseLimit paymentId={} userId={} amount={}",
+                "[LimitsGrpc] ReleaseLimit paymentId={} userId={} amount={} idempotencyKey={}",
                 request.getPaymentId(),
                 sourceUserId,
-                amount);
+                amount,
+                idempotencyKey);
 
-        limitsService.release(sourceUserId, amount);
+        limitsService.release(sourceUserId, amount, idempotencyKey);
         responseObserver.onNext(
                 ReleaseLimitResponse.newBuilder().setReleased(true).build());
         responseObserver.onCompleted();
