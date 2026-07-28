@@ -4,11 +4,11 @@ import com.example.payment.api.model.ApiPayment;
 import com.example.payment.api.model.ApiPaymentHistory;
 import com.example.payment.domain.Payment;
 import com.example.payment.domain.PaymentHistory;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
+
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PaymentMapper {
@@ -17,10 +17,10 @@ public interface PaymentMapper {
 
     ApiPaymentHistory toApi(PaymentHistory domain);
 
-    default OffsetDateTime map(LocalDateTime time) {
+    default OffsetDateTime map(ZonedDateTime time) {
         if (time == null) {
             return null;
         }
-        return time.atOffset(ZoneOffset.UTC);
+        return time.toOffsetDateTime();
     }
 }

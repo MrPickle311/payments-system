@@ -7,12 +7,26 @@ import com.example.payments.fx.grpc.FxServiceGrpc;
 import com.example.payments.limits.grpc.LimitsServiceGrpc;
 import com.example.payments.sanctions.grpc.SanctionsServiceGrpc;
 import com.example.payments.wallet.grpc.WalletServiceGrpc;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
+import io.grpc.netty.shaded.io.netty.channel.ChannelOption;
+import net.devh.boot.grpc.client.channelfactory.GrpcChannelConfigurer;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class GrpcClientConfig {
+
+    private static final int CONNECT_TIMEOUT_MS = 3000;
+
+    @Bean
+    public GrpcChannelConfigurer customGrpcChannelConfigurer() {
+        return (channelBuilder, _) -> {
+            if (channelBuilder instanceof NettyChannelBuilder nettyBuilder) {
+                nettyBuilder.withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, CONNECT_TIMEOUT_MS);
+            }
+        };
+    }
 
     @Bean
     public FraudServiceGrpc.FraudServiceBlockingStub fraudCheckService(

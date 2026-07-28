@@ -5,11 +5,6 @@ import com.example.payment.domain.event.PaymentCreatedEvent;
 import com.example.payment.domain.event.PaymentDomainEvent;
 import com.example.payment.domain.event.PaymentStateChangedEvent;
 import com.example.payments.common.sharedkernel.Money;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +13,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.jmolecules.ddd.annotation.AggregateRoot;
+
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static com.example.payment.domain.enums.PaymentState.COMPLETED;
+import static com.example.payment.domain.enums.PaymentState.FAILED;
+import static com.example.payment.domain.enums.PaymentState.NEW;
+import static com.example.payment.domain.enums.PaymentState.valueOf;
 
 @ToString
 @Getter
@@ -33,10 +39,11 @@ public class Payment {
     private Money money;
 
     @Builder.Default
-    private String state = PaymentState.NEW.name();
+    private String state = NEW.name();
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private ZonedDateTime createdAt;
+    private ZonedDateTime updatedAt;
+    private Long version;
 
     private Long sourceUserId;
     private Long targetUserId;
@@ -58,15 +65,13 @@ public class Payment {
             return null;
         }
         String rootStateName = this.state.split(",")[0];
-        return PaymentState.valueOf(rootStateName);
+        return valueOf(rootStateName);
     }
 
     public boolean isTerminal() {
         PaymentState current = currentState();
-        return current == PaymentState.COMPLETED
-                || current == PaymentState.FAILED
-                || current == PaymentState.CANCELED
-                || current == PaymentState.REFUNDED;
+        return current == COMPLETED
+                || current == FAILED;
     }
 
     public void markFraudEvaluation(Integer score, String risk) {

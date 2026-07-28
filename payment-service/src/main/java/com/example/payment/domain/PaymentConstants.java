@@ -33,13 +33,11 @@ public final class PaymentConstants {
     public static final String STATUS_AUTH_REJECTED = "AUTH_REJECTED";
     public static final String STATUS_FRAUD_PASSED = "FRAUD_PASSED";
     public static final String STATUS_FRAUD_DETECTED = "FRAUD_DETECTED";
+    public static final String STATUS_FRAUD_FAILED = "FRAUD_FAILED";
     public static final String STATUS_LIMITS_OK = "LIMITS_OK";
     public static final String STATUS_LIMITS_EXCEEDED = "LIMITS_EXCEEDED";
     public static final String STATUS_LIMITS_RELEASED = "LIMITS_RELEASED";
     public static final String STATUS_SANCTIONS_CLEARED = "SANCTIONS_CLEARED";
     public static final String STATUS_SANCTIONS_HIT = "SANCTIONS_HIT";
-    public static final String STATUS_FEE_CALCULATED = "FEE_CALCULATED";
-    public static final String STATUS_FEE_CHARGED = "FEE_CHARGED";
-    public static final String STATUS_FEE_FAILED = "FEE_FAILED";
     public static final String STATUS_FEE_REFUNDED = "FEE_REFUNDED";
 }

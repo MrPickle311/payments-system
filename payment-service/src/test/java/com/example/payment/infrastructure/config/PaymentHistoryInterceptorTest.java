@@ -22,84 +22,85 @@ import org.springframework.statemachine.state.State;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentHistoryInterceptorTest {
-  private static final String PAYMENT_ID_KEY = "paymentId";
-  private static final String IS_RESTORING_KEY = "isRestoring";
+    private static final String PAYMENT_ID_KEY = "paymentId";
+    private static final String IS_RESTORING_KEY = "isRestoring";
 
-  @Mock
-  private PaymentHistoryRepository paymentHistoryRepository;
-  @Mock
-  private StateContext<PaymentState, PaymentEvent> stateContext;
-  @Mock
-  private ExtendedState extendedState;
+    @Mock
+    private PaymentHistoryRepository paymentHistoryRepository;
 
-  private PaymentHistoryInterceptor interceptor;
+    @Mock
+    private StateContext<PaymentState, PaymentEvent> stateContext;
 
-  @BeforeEach
-  void setUp() {
-    interceptor = new PaymentHistoryInterceptor(paymentHistoryRepository);
-    when(stateContext.getStage()).thenReturn(StateContext.Stage.STATE_CHANGED);
-  }
+    @Mock
+    private ExtendedState extendedState;
 
-  @Test
-  void testStateContextSourceNull() {
-    when(stateContext.getSource()).thenReturn(null);
-    interceptor.stateContext(stateContext);
-    verifyNoInteractions(paymentHistoryRepository);
-  }
+    private PaymentHistoryInterceptor interceptor;
 
-  @Test
-  void testStateContextTargetNull() {
-    State<PaymentState, PaymentEvent> sourceState = mock(State.class);
-    when(stateContext.getSource()).thenReturn(sourceState);
-    when(stateContext.getTarget()).thenReturn(null);
-    interceptor.stateContext(stateContext);
-    verifyNoInteractions(paymentHistoryRepository);
-  }
+    @BeforeEach
+    void setUp() {
+        interceptor = new PaymentHistoryInterceptor(paymentHistoryRepository);
+        when(stateContext.getStage()).thenReturn(StateContext.Stage.STATE_CHANGED);
+    }
 
-  @Test
-  void testStateContextIsRestoringTrue() {
-    State<PaymentState, PaymentEvent> sourceState = mock(State.class);
-    State<PaymentState, PaymentEvent> targetState = mock(State.class);
+    @Test
+    void testStateContextSourceNull() {
+        when(stateContext.getSource()).thenReturn(null);
+        interceptor.stateContext(stateContext);
+        verifyNoInteractions(paymentHistoryRepository);
+    }
 
-    when(stateContext.getSource()).thenReturn(sourceState);
-    when(stateContext.getTarget()).thenReturn(targetState);
-    when(stateContext.getExtendedState()).thenReturn(extendedState);
-    when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
-    when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(true);
+    @Test
+    void testStateContextTargetNull() {
+        State<PaymentState, PaymentEvent> sourceState = mock(State.class);
+        when(stateContext.getSource()).thenReturn(sourceState);
+        when(stateContext.getTarget()).thenReturn(null);
+        interceptor.stateContext(stateContext);
+        verifyNoInteractions(paymentHistoryRepository);
+    }
 
-    interceptor.stateContext(stateContext);
-    verifyNoInteractions(paymentHistoryRepository);
-  }
+    @Test
+    void testStateContextIsRestoringTrue() {
+        State<PaymentState, PaymentEvent> sourceState = mock(State.class);
+        State<PaymentState, PaymentEvent> targetState = mock(State.class);
 
-  @Test
-  void testStateContextSaveHistory() {
-    State<PaymentState, PaymentEvent> source = mock(State.class);
-    State<PaymentState, PaymentEvent> target = mock(State.class);
-    when(source.getId()).thenReturn(PaymentState.NEW);
-    when(target.getId()).thenReturn(PaymentState.PROCESSING);
-    when(stateContext.getSource()).thenReturn(source);
-    when(stateContext.getTarget()).thenReturn(target);
-    when(stateContext.getExtendedState()).thenReturn(extendedState);
-    when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
-    when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(false);
-    interceptor.stateContext(stateContext);
-    verify(paymentHistoryRepository).save(any(PaymentHistory.class));
-  }
+        when(stateContext.getSource()).thenReturn(sourceState);
+        when(stateContext.getTarget()).thenReturn(targetState);
+        when(stateContext.getExtendedState()).thenReturn(extendedState);
+        when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+        when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(true);
 
-  @Test
-  void testSubRegionStateSaveHistory() {
-    State<PaymentState, PaymentEvent> source = mock(State.class);
-    State<PaymentState, PaymentEvent> target = mock(State.class);
-    when(source.getId()).thenReturn(PaymentState.FRAUD_EVALUATING);
-    when(target.getId()).thenReturn(PaymentState.FRAUD_PASSED);
-    when(stateContext.getSource()).thenReturn(source);
-    when(stateContext.getTarget()).thenReturn(target);
-    when(stateContext.getExtendedState()).thenReturn(extendedState);
-    when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+        interceptor.stateContext(stateContext);
+        verifyNoInteractions(paymentHistoryRepository);
+    }
 
-    interceptor.stateContext(stateContext);
+    @Test
+    void testStateContextSaveHistory() {
+        State<PaymentState, PaymentEvent> source = mock(State.class);
+        State<PaymentState, PaymentEvent> target = mock(State.class);
+        when(source.getId()).thenReturn(PaymentState.NEW);
+        when(target.getId()).thenReturn(PaymentState.PROCESSING);
+        when(stateContext.getSource()).thenReturn(source);
+        when(stateContext.getTarget()).thenReturn(target);
+        when(stateContext.getExtendedState()).thenReturn(extendedState);
+        when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+        when(extendedState.get(IS_RESTORING_KEY, Boolean.class)).thenReturn(false);
+        interceptor.stateContext(stateContext);
+        verify(paymentHistoryRepository).save(any(PaymentHistory.class));
+    }
 
-    verify(paymentHistoryRepository)
-        .save(argThat(history -> "FraudCheck".equals(history.getRegion())));
-  }
+    @Test
+    void testSubRegionStateSaveHistory() {
+        State<PaymentState, PaymentEvent> source = mock(State.class);
+        State<PaymentState, PaymentEvent> target = mock(State.class);
+        when(source.getId()).thenReturn(PaymentState.FRAUD_EVALUATING);
+        when(target.getId()).thenReturn(PaymentState.FRAUD_PASSED);
+        when(stateContext.getSource()).thenReturn(source);
+        when(stateContext.getTarget()).thenReturn(target);
+        when(stateContext.getExtendedState()).thenReturn(extendedState);
+        when(extendedState.get(PAYMENT_ID_KEY, Long.class)).thenReturn(1L);
+
+        interceptor.stateContext(stateContext);
+
+        verify(paymentHistoryRepository).save(argThat(history -> "FraudCheck".equals(history.getRegion())));
+    }
 }

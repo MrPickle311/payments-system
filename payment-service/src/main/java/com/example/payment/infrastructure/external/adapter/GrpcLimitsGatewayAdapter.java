@@ -35,11 +35,11 @@ public class GrpcLimitsGatewayAdapter implements LimitsGateway {
                 amount,
                 currency);
         var request = LimitsRequest.newBuilder()
-                .setPaymentId(paymentId)
-                .setSourceUserId(sourceUserId)
-                .setAmount(amount)
-                .setCurrency(currency)
-                .setIdempotencyKey(idempotencyKey)
+                .setPaymentId(paymentId != null ? paymentId : 0L)
+                .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
+                .setAmount(amount != null ? amount : "")
+                .setCurrency(currency != null ? currency : "")
+                .setIdempotencyKey(idempotencyKey != null ? idempotencyKey : "")
                 .build();
         return limitsService.withDeadlineAfter(3, SECONDS).checkLimits(request);
     }
@@ -55,10 +55,10 @@ public class GrpcLimitsGatewayAdapter implements LimitsGateway {
                 sourceUserId,
                 amount);
         var request = ReleaseLimitRequest.newBuilder()
-                .setPaymentId(paymentId)
-                .setSourceUserId(sourceUserId)
-                .setAmount(amount)
-                .setIdempotencyKey(idempotencyKey)
+                .setPaymentId(paymentId != null ? paymentId : 0L)
+                .setSourceUserId(sourceUserId != null ? sourceUserId : 0L)
+                .setAmount(amount != null ? amount : "")
+                .setIdempotencyKey(idempotencyKey != null ? idempotencyKey : "")
                 .build();
         return limitsService.withDeadlineAfter(3, SECONDS).releaseLimit(request);
     }

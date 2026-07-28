@@ -6,6 +6,9 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+
 @Mapper(
         componentModel = "spring",
         unmappedTargetPolicy = ReportingPolicy.IGNORE,
@@ -19,4 +22,18 @@ public interface PaymentEntityMapper {
     @Mapping(target = "money", expression = "java(Money.of(entity.getAmount(), entity.getCurrency()))")
     @Mapping(target = "domainEvents", ignore = true)
     Payment toDomain(PaymentJpaEntity entity);
+
+    default OffsetDateTime map(ZonedDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toOffsetDateTime();
+    }
+
+    default ZonedDateTime map(OffsetDateTime value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toZonedDateTime();
+    }
 }

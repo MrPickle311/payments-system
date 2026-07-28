@@ -1,13 +1,14 @@
 package com.example.payment.domain;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.jmolecules.ddd.annotation.Entity;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @ToString
 @Getter
@@ -28,5 +29,5 @@ public class PaymentHistory {
     private String event;
 
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now(ZoneId.systemDefault());
+    private ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.systemDefault());
 }

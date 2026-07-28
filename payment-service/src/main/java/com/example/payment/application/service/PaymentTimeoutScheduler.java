@@ -2,14 +2,15 @@ package com.example.payment.application.service;
 
 import com.example.payment.infrastructure.persistence.PaymentJpaEntity;
 import com.example.payment.infrastructure.persistence.SpringDataPaymentRepository;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -29,10 +30,10 @@ public class PaymentTimeoutScheduler {
      * fixedDelay (not fixedRate) ensures runs never overlap within the same pod.
      */
     @Scheduled(fixedDelay = 60_000)
-    @Transactional
+    @Transactional(readOnly = true)
     public void sweepStuckPayments() {
-        LocalDateTime threshold = LocalDateTime.now(clock).minusMinutes(STUCK_THRESHOLD_MINUTES);
-        List<PaymentJpaEntity> stuck = paymentRepository.findStuckPaymentsForUpdate(threshold, BATCH_SIZE);
+        var threshold = OffsetDateTime.now(clock).minusMinutes(STUCK_THRESHOLD_MINUTES);
+        List<PaymentJpaEntity> stuck = paymentRepository.findStuckPayments(threshold, BATCH_SIZE);
         if (stuck.isEmpty()) {
             return;
         }

@@ -101,7 +101,9 @@ public class PaymentService {
     public void forceTimeout(Long paymentId) {
         Payment payment =
                 paymentRepository.findById(paymentId).orElseThrow(() -> new PaymentNotFoundException(paymentId));
-        if (!"PROCESSING".equals(payment.getState())) return;
+        if (!"PROCESSING".equals(payment.getState())) {
+            return;
+        }
         log.warn("[Timeout] Forcing FAIL for stuck paymentId={}", paymentId);
         stateMachineManager.execute(payment, PaymentEvent.FAIL);
         savePayment(paymentId, payment);

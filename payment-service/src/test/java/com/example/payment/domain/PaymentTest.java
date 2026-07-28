@@ -1,55 +1,49 @@
 package com.example.payment.domain;
 
-import com.example.payment.domain.enums.PaymentState;
-import java.math.BigDecimal;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.example.payment.domain.enums.PaymentState;
+import java.math.BigDecimal;
+import org.junit.jupiter.api.Test;
+
 class PaymentTest {
 
-  @Test
-  void testCurrentStateNull() {
-    Payment payment = Payment.builder().state(null).build();
-    assertNull(payment.currentState());
-  }
+    private static final String FEE_2_50 = "2.50";
+    private static final String NET_97_50 = "97.50";
+    private static final String RISK_HIGH = "HIGH";
 
-  @Test
-  void testIsTerminal() {
-    Payment nonTerminal = Payment.builder().state(PaymentState.NEW.name()).build();
-    assertFalse(nonTerminal.isTerminal());
+    @Test
+    void testCurrentStateNull() {
+        Payment payment = Payment.builder().state(null).build();
+        assertNull(payment.currentState());
+    }
 
-    Payment completed = Payment.builder().state(PaymentState.COMPLETED.name()).build();
-    assertTrue(completed.isTerminal());
+    @Test
+    void testIsTerminal() {
+        assertFalse(Payment.builder().state(PaymentState.NEW.name()).build().isTerminal());
+        assertTrue(
+                Payment.builder().state(PaymentState.COMPLETED.name()).build().isTerminal());
+        assertTrue(Payment.builder().state(PaymentState.FAILED.name()).build().isTerminal());
+    }
 
-    Payment failed = Payment.builder().state(PaymentState.FAILED.name()).build();
-    assertTrue(failed.isTerminal());
+    @Test
+    void testUpdateFinancialDetails() {
+        Payment payment = Payment.builder().build();
+        payment.updateFinancialDetails(new BigDecimal(FEE_2_50), new BigDecimal(NET_97_50));
 
-    Payment canceled = Payment.builder().state(PaymentState.CANCELED.name()).build();
-    assertTrue(canceled.isTerminal());
+        assertEquals(new BigDecimal(FEE_2_50), payment.getProcessingFee());
+        assertEquals(new BigDecimal(NET_97_50), payment.getNetAmount());
+    }
 
-    Payment refunded = Payment.builder().state(PaymentState.REFUNDED.name()).build();
-    assertTrue(refunded.isTerminal());
-  }
+    @Test
+    void testMarkFraudEvaluation() {
+        Payment payment = Payment.builder().build();
+        payment.markFraudEvaluation(85, RISK_HIGH);
 
-  @Test
-  void testUpdateFinancialDetails() {
-    Payment payment = Payment.builder().build();
-    payment.updateFinancialDetails(new BigDecimal("2.50"), new BigDecimal("97.50"));
-
-    assertEquals(new BigDecimal("2.50"), payment.getProcessingFee());
-    assertEquals(new BigDecimal("97.50"), payment.getNetAmount());
-  }
-
-  @Test
-  void testMarkFraudEvaluation() {
-    Payment payment = Payment.builder().build();
-    payment.markFraudEvaluation(85, "HIGH");
-
-    assertEquals(85, payment.getFraudScore());
-    assertEquals("HIGH", payment.getFraudRisk());
-  }
+        assertEquals(85, payment.getFraudScore());
+        assertEquals(RISK_HIGH, payment.getFraudRisk());
+    }
 }

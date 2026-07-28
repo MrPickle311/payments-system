@@ -1,7 +1,7 @@
 package com.example.payment.application.service;
 
 import com.example.payments.common.sharedkernel.outbox.OutboxEventEntity;
-import com.example.payments.common.sharedkernel.outbox.OutboxRepository;
+import com.example.payments.common.sharedkernel.outbox.OutboxRepositoryProxy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,9 +11,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WebhookService {
 
-    private final OutboxRepository outboxRepository;
+    private final OutboxRepositoryProxy outboxRepositoryProxy;
 
     public void sendWebhook(Long paymentId, String status) {
+        if (paymentId == null) {
+            log.error("[WebhookService] Cannot send webhook outbox event with null paymentId");
+            return;
+        }
         log.debug("[WebhookService] Saving outbox {} webhook for paymentId={}", status, paymentId);
         String payload = toJsonPayload(paymentId, status);
         OutboxEventEntity outboxEvent = OutboxEventEntity.builder()
@@ -24,7 +28,7 @@ public class WebhookService {
                 .topic("payment-webhooks")
                 .processed(false)
                 .build();
-        outboxRepository.save(outboxEvent);
+        outboxRepositoryProxy.save(outboxEvent);
     }
 
     private static String toJsonPayload(Long paymentId, String status) {

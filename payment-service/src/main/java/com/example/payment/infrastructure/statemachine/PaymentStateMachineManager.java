@@ -7,10 +7,8 @@ import static com.example.payment.domain.PaymentConstants.TARGET_USER_ID;
 import static com.example.payment.domain.enums.PaymentEvent.AUTHORIZE;
 import static com.example.payment.domain.enums.PaymentEvent.FAIL;
 import static com.example.payment.domain.enums.PaymentEvent.REDIRECT;
-import static com.example.payment.domain.enums.PaymentState.CANCELED;
 import static com.example.payment.domain.enums.PaymentState.COMPLETED;
 import static com.example.payment.domain.enums.PaymentState.FAILED;
-import static com.example.payment.domain.enums.PaymentState.REFUNDED;
 import static org.springframework.statemachine.StateMachineEventResult.ResultType.DENIED;
 
 import com.example.payment.application.saga.GuardCheckContext;
@@ -46,12 +44,12 @@ public class PaymentStateMachineManager {
     private final ParallelSagaJoinInterceptor parallelSagaJoinInterceptor;
     private final PaymentStateMachinePersistingInterceptor persistingInterceptor;
 
-    public PaymentState execute(Payment payment, PaymentEvent event) {
+    public void execute(Payment payment, PaymentEvent event) {
         StateMachine<PaymentState, PaymentEvent> sm =
                 stateMachineFactory.getStateMachine(UUID.randomUUID().toString());
         try {
             configureStateMachine(sm, payment);
-            return processStateMachineEvent(sm, payment, event);
+            processStateMachineEvent(sm, payment, event);
         } finally {
             stopIfTerminal(sm, payment);
         }
@@ -100,11 +98,7 @@ public class PaymentStateMachineManager {
 
     private boolean isStateMachineTerminal(StateMachine<PaymentState, PaymentEvent> sm) {
         var state = sm.getState();
-        return state != null
-                && (state.getId() == COMPLETED
-                        || state.getId() == FAILED
-                        || state.getId() == CANCELED
-                        || state.getId() == REFUNDED);
+        return state != null && (state.getId() == COMPLETED || state.getId() == FAILED);
     }
 
     private List<StateMachineEventResult<PaymentState, PaymentEvent>> sendEventToStateMachine(
