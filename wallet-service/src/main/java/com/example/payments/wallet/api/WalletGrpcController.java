@@ -26,9 +26,16 @@ public class WalletGrpcController extends WalletServiceGrpc.WalletServiceImplBas
                 request.getAmount(),
                 request.getCurrency());
 
-        String status = walletService.debitBetweenUsers(request);
-
-        responseObserver.onNext(DebitResponse.newBuilder().setStatus(status).build());
-        responseObserver.onCompleted();
+        try {
+            String status = walletService.debitBetweenUsers(request);
+            responseObserver.onNext(DebitResponse.newBuilder().setStatus(status).build());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            log.error("[WalletGrpc] Error processing debit for paymentId={}", request.getPaymentId(), e);
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Error processing debit: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+        }
     }
 }

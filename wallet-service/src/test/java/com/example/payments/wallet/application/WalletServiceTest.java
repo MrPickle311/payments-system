@@ -47,8 +47,8 @@ class WalletServiceTest {
                 .setSourceUserId(1L)
                 .setTargetUserId(2L)
                 .build();
-        when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.empty());
-        when(walletAccountPort.findByUserIdAndCurrency(2L, USD)).thenReturn(Optional.empty());
+        when(walletAccountPort.findByUserIdAndCurrencyForUpdate(1L, USD)).thenReturn(Optional.empty());
+        when(walletAccountPort.findByUserIdAndCurrencyForUpdate(2L, USD)).thenReturn(Optional.empty());
         WalletAccount src = createAccount(1L, USD);
         WalletAccount tgt = createAccount(2L, USD);
         when(walletAccountPort.save(any(WalletAccount.class))).thenReturn(src, tgt);
@@ -69,7 +69,7 @@ class WalletServiceTest {
                 .setTargetUserId(2L)
                 .build();
         WalletAccount src = createAccount(1L, USD);
-        when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.of(src));
+        when(walletAccountPort.findByUserIdAndCurrencyForUpdate(1L, USD)).thenReturn(Optional.of(src));
 
         String status = walletService.debitBetweenUsers(req);
 
@@ -88,8 +88,8 @@ class WalletServiceTest {
                 .build();
         WalletAccount src = createAccount(1L, USD);
         WalletAccount tgt = createAccount(2L, USD);
-        when(walletAccountPort.findByUserIdAndCurrency(1L, USD)).thenReturn(Optional.of(src));
-        when(walletAccountPort.findByUserIdAndCurrency(2L, USD)).thenReturn(Optional.of(tgt));
+        when(walletAccountPort.findByUserIdAndCurrencyForUpdate(1L, USD)).thenReturn(Optional.of(src));
+        when(walletAccountPort.findByUserIdAndCurrencyForUpdate(2L, USD)).thenReturn(Optional.of(tgt));
 
         String status = walletService.debitBetweenUsers(req);
 

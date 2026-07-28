@@ -68,10 +68,10 @@ public class WalletService {
     }
 
     private void transferMoney(WalletAccount source, long targetId, BigDecimal amount, String currency) {
-        source.setBalance(source.getBalance().subtract(amount));
-        walletAccountPort.save(source);
         WalletAccount target = getOrCreateAccountForUpdate(targetId, currency);
+        source.setBalance(source.getBalance().subtract(amount));
         target.setBalance(target.getBalance().add(amount));
+        walletAccountPort.save(source);
         walletAccountPort.save(target);
     }
 
@@ -82,8 +82,12 @@ public class WalletService {
     }
 
     private WalletAccount createMockAccount(long userId, String currency) {
+        long uniqueAccountId = Math.abs(java.util.Objects.hash(userId, currency));
+        if (uniqueAccountId == userId) {
+            uniqueAccountId = uniqueAccountId + 1000000L;
+        }
         WalletAccount newAccount = WalletAccount.builder()
-                .id(userId)
+                .id(uniqueAccountId)
                 .userId(userId)
                 .balance(DEFAULT_MOCK_BALANCE)
                 .currency(currency)

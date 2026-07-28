@@ -22,7 +22,7 @@ public class WalletAccountRepositoryAdapter implements WalletAccountPort {
     @Override
     public WalletAccount save(WalletAccount account) {
         WalletAccountEntity entity = mapper.toEntity(account);
-        WalletAccountEntity savedEntity = walletAccountRepository.save(entity);
+        WalletAccountEntity savedEntity = walletAccountRepository.saveAndFlush(entity);
         return mapper.toDomain(savedEntity);
     }
 }
