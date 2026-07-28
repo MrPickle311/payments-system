@@ -18,7 +18,7 @@ public class FxGrpcService extends FxServiceGrpc.FxServiceImplBase {
     private static final int SCALE = 4;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
-    private static final Map<String, BigDecimal> RATES_VS_USD = Map.ofEntries(
+    public static final Map<String, BigDecimal> RATES_VS_USD = Map.ofEntries(
             Map.entry("USD", BigDecimal.ONE),
             Map.entry("EUR", new BigDecimal("0.92")),
             Map.entry("GBP", new BigDecimal("0.79")),
@@ -30,16 +30,20 @@ public class FxGrpcService extends FxServiceGrpc.FxServiceImplBase {
 
     @Override
     public void processFx(FxRequest req, StreamObserver<FxResponse> observer) {
-        long payId = req.getPaymentId();
-        log.debug("[FxService] ProcessFx paymentId={}", payId);
+        long paymentId = req.getPaymentId();
+        log.debug("[FxService] ProcessFx paymentId={}", paymentId);
         try {
             BigDecimal amount = new BigDecimal(req.getAmount());
+            Thread.sleep(200);
             observer.onNext(handleConversion(
                     req.getSourceCurrency().toUpperCase(),
                     req.getTargetCurrency().toUpperCase(),
                     amount));
+        }  catch (InterruptedException e) {
+          log.error("[FxService] interrupted paymentId: {}", paymentId, e);
+          Thread.currentThread().interrupt();
         } catch (Exception e) {
-            log.error("[FxService] Error processing FX for paymentId={}", payId, e);
+            log.error("[FxService] Error processing FX for paymentId={}", paymentId, e);
             observer.onNext(FxResponse.newBuilder().setSuccess(false).build());
         }
         observer.onCompleted();

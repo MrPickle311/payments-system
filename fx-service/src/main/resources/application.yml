@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: fx-service
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:}
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:${REDIS_HOST:redis}:${REDIS_PORT:6379}}
 
 grpc:
   server:
