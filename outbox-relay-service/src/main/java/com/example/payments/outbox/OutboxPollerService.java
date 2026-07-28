@@ -28,23 +28,28 @@ public class OutboxPollerService {
     }
 
     private void publishSingleEvent(OutboxEventEntity event) {
+        if (event.getAggregateId() == null || "null".equals(event.getAggregateId())) {
+            log.error("[OutboxPoller] Skipping poison outbox event id={} with invalid aggregateId='{}'", event.getId(), event.getAggregateId());
+            event.setProcessed(true);
+            outboxRepository.save(event);
+            return;
+        }
+
         try {
             kafkaTemplate
                     .send(event.getTopic(), event.getAggregateId(), event.getPayload())
                     .get();
             event.setProcessed(true);
+            outboxRepository.save(event);
             log.info(
                     "[OutboxPoller] Successfully published outbox event id={} to topic={}",
                     event.getId(),
                     event.getTopic());
         } catch (InterruptedException e) {
-            log.warn("Thread interrupted", e);
+            log.warn("Thread interrupted while publishing outbox event id={}", event.getId(), e);
             Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("[OutboxPoller] Failed to publish outbox event id={}: {}", event.getId(), e.getMessage(), e);
-        }
-        finally {
-            outboxRepository.save(event);
         }
     }
 }
