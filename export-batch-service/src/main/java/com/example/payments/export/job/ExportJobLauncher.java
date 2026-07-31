@@ -48,19 +48,7 @@ public class ExportJobLauncher {
     }
 
     private JobParameters determineJobParameters() {
-        List<JobInstance> instances = jobExplorer.findJobInstancesByJobName(exportLedgerJob.getName(), 0, 1);
-        if (!instances.isEmpty()) {
-            JobInstance lastInstance = instances.get(0);
-            List<JobExecution> executions = jobExplorer.getJobExecutions(lastInstance);
-            if (!executions.isEmpty()) {
-                JobExecution lastExecution = executions.get(0);
-                if (lastExecution.getStatus().isUnsuccessful()) {
-                    log.info("[JobLauncher] Previous execution FAILED. Restarting with same parameters.");
-                    return lastExecution.getJobParameters();
-                }
-            }
-        }
-        log.info("[JobLauncher] Starting fresh job execution.");
+        log.info("[JobLauncher] Starting fresh job execution with explicit offsets.");
         JobParametersBuilder builder = new JobParametersBuilder()
                 .addLong("time", System.currentTimeMillis());
                 
