@@ -51,8 +51,9 @@ The system adheres to strict quality checks:
 # Clean and compile the entire project
 mvn clean compile
 
-# Checkstyle analysis
-mvn checkstyle:check
+# Spotless code format check & apply
+mvn spotless:check
+mvn spotless:apply
 
 # Run unit and integration tests
 mvn test

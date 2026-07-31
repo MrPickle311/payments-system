@@ -16,7 +16,9 @@ public class WalletAccountRepositoryAdapter implements WalletAccountPort {
 
     @Override
     public Optional<WalletAccount> findByUserIdAndCurrencyForUpdate(Long userId, String currency) {
-        return walletAccountRepository.findByUserIdAndCurrencyForUpdate(userId, currency).map(mapper::toDomain);
+        return walletAccountRepository
+                .findByUserIdAndCurrencyForUpdate(userId, currency)
+                .map(mapper::toDomain);
     }
 
     @Override

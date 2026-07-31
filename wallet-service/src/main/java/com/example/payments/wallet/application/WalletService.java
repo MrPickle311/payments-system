@@ -40,7 +40,8 @@ public class WalletService {
         if (amount == null) {
             return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }
-        WalletAccount sourceWalletAccount = getOrCreateAccountForUpdate(request.getSourceUserId(), request.getCurrency());
+        WalletAccount sourceWalletAccount =
+                getOrCreateAccountForUpdate(request.getSourceUserId(), request.getCurrency());
         if (sourceWalletAccount.getBalance().compareTo(amount) < 0) {
             return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }

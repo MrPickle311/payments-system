@@ -13,7 +13,6 @@ import com.example.payment.domain.Payment;
 import com.example.payment.domain.PaymentHistory;
 import com.example.payments.common.sharedkernel.Money;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

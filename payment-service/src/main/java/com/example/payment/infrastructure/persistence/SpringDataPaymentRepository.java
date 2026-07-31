@@ -24,6 +24,5 @@ public interface SpringDataPaymentRepository extends JpaRepository<PaymentJpaEnt
             LIMIT :batchSize
             """)
     List<PaymentJpaEntity> findStuckPayments(
-            @Param("threshold") OffsetDateTime threshold,
-            @Param("batchSize") int batchSize);
+            @Param("threshold") OffsetDateTime threshold, @Param("batchSize") int batchSize);
 }

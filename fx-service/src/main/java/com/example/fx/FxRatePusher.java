@@ -24,9 +24,12 @@ public class FxRatePusher {
     public void pushRatesToRedis() {
         try {
             Map<String, String> stringRates = FxGrpcService.RATES_VS_USD.entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toPlainString()));
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey, e -> e.getValue().toPlainString()));
             redisTemplate.opsForHash().putAll(FX_CONVERSION_RATES_KEY, stringRates);
-            log.info("[FxRatePusher] Pushed conversion rates table from FxGrpcService to Redis hash '{}'", FX_CONVERSION_RATES_KEY);
+            log.info(
+                    "[FxRatePusher] Pushed conversion rates table from FxGrpcService to Redis hash '{}'",
+                    FX_CONVERSION_RATES_KEY);
         } catch (Exception ex) {
             log.warn("[FxRatePusher] Failed to push rates table to Redis: {}", ex.getMessage(), ex);
         }

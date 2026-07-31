@@ -9,6 +9,7 @@ import static org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_M
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,9 +44,21 @@ public class KafkaReaderConfig {
             partitionId = getPartitionId();
         }
         Properties props = buildConsumerProperties(partitionId);
+        Map<org.apache.kafka.common.TopicPartition, Long> offsets = new HashMap<>();
+        if (StepSynchronizationManager.getContext() != null) {
+            Long paramOffset = StepSynchronizationManager.getContext()
+                    .getStepExecution()
+                    .getJobExecution()
+                    .getJobParameters()
+                    .getLong("offset-" + partitionId);
+            if (paramOffset != null) {
+                offsets.put(new org.apache.kafka.common.TopicPartition(exportProperties.getTopic(), partitionId), paramOffset);
+            }
+        }
+        
         return new KafkaItemReaderBuilder<String, String>()
                 .partitions(partitionId)
-                .partitionOffsets(new HashMap<>())
+                .partitionOffsets(offsets)
                 .consumerProperties(props)
                 .name(PARTITION_NAME_PREFIX + partitionId)
                 .saveState(true)

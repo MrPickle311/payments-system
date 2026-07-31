@@ -39,9 +39,9 @@ public class FxGrpcService extends FxServiceGrpc.FxServiceImplBase {
                     req.getSourceCurrency().toUpperCase(),
                     req.getTargetCurrency().toUpperCase(),
                     amount));
-        }  catch (InterruptedException e) {
-          log.error("[FxService] interrupted paymentId: {}", paymentId, e);
-          Thread.currentThread().interrupt();
+        } catch (InterruptedException e) {
+            log.error("[FxService] interrupted paymentId: {}", paymentId, e);
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("[FxService] Error processing FX for paymentId={}", paymentId, e);
             observer.onNext(FxResponse.newBuilder().setSuccess(false).build());

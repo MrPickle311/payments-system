@@ -15,7 +15,7 @@ public class GlobalConfig {
     }
 
     @Bean
-    public Clock clock(){
+    public Clock clock() {
         return Clock.systemDefaultZone();
     }
 }

@@ -11,6 +11,5 @@ import org.springframework.stereotype.Repository;
 public interface DailyLimitRecordRepository extends JpaRepository<DailyLimitRecordEntity, Long> {
 
     @Query("SELECT d FROM DailyLimitRecordEntity d WHERE d.userId = :userId AND d.date = :date")
-    Optional<DailyLimitRecordEntity> findByUserIdAndDate(
-            @Param("userId") Long userId, @Param("date") LocalDate date);
+    Optional<DailyLimitRecordEntity> findByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 }

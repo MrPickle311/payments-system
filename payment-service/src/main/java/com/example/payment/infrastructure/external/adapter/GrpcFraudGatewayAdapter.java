@@ -1,5 +1,7 @@
 package com.example.payment.infrastructure.external.adapter;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import com.example.payment.domain.gateway.FraudGateway;
 import com.example.payments.fraud.grpc.FraudRequest;
 import com.example.payments.fraud.grpc.FraudResponse;
@@ -9,8 +11,6 @@ import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Component
 @RequiredArgsConstructor

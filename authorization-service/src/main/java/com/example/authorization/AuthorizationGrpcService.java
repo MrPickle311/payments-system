@@ -17,14 +17,21 @@ public class AuthorizationGrpcService extends AuthorizationServiceGrpc.Authoriza
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
+            log.error("Interrupted", e);
             Thread.currentThread().interrupt();
         }
 
+        boolean success = isSuccess();
         AuthorizationResponse response =
-                AuthorizationResponse.newBuilder().setSuccess(true).build();
+                AuthorizationResponse.newBuilder().setSuccess(success).build();
+        log.info("Response for paymentId: {}, is: {}", request.getPaymentId(), response.getSuccess());
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+    }
+
+    private static boolean isSuccess() {
+        return true;
     }
 
     @Override

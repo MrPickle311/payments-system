@@ -33,7 +33,9 @@ public class LimitsService {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             var existing = idempotencyRepository.findById(idempotencyKey);
             if (existing.isPresent()) {
-                log.info("[LimitsService] Duplicate checkAndConsume, returning cached status for key={}", idempotencyKey);
+                log.info(
+                        "[LimitsService] Duplicate checkAndConsume, returning cached status for key={}",
+                        idempotencyKey);
                 return "true".equals(existing.get().getStatus());
             }
         }
@@ -48,11 +50,12 @@ public class LimitsService {
         limit.consume(amount);
         dailyLimitRepository.save(limit);
         log.info("[LimitsService] Limit consumed userId={} totalUsedToday={}", userId, limit.getAmountUsed());
-        
+
         return saveIdempotencyAndReturn(idempotencyKey, true);
     }
 
-    private boolean handleLimitExceeded(Long userId, BigDecimal amountUsed, BigDecimal requested, String idempotencyKey) {
+    private boolean handleLimitExceeded(
+            Long userId, BigDecimal amountUsed, BigDecimal requested, String idempotencyKey) {
         log.warn(
                 "[LimitsService] Daily limit exceeded userId={} amountUsed={} requested={}",
                 userId,

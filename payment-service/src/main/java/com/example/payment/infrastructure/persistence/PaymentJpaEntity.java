@@ -1,8 +1,5 @@
 package com.example.payment.infrastructure.persistence;
 
-import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

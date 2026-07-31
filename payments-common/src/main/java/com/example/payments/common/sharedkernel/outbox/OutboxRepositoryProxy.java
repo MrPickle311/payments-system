@@ -19,7 +19,10 @@ public class OutboxRepositoryProxy {
             maxAttempts = 5,
             backoff = @Backoff(delay = 100, multiplier = 2.0, maxDelay = 2000))
     public OutboxEventEntity save(OutboxEventEntity entity) {
-        log.debug("[OutboxProxy] Saving outbox event aggregateId={} eventType={}", entity.getAggregateId(), entity.getEventType());
+        log.debug(
+                "[OutboxProxy] Saving outbox event aggregateId={} eventType={}",
+                entity.getAggregateId(),
+                entity.getEventType());
         return outboxRepository.save(entity);
     }
 }

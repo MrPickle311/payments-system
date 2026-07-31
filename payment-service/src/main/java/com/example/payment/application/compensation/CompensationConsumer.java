@@ -1,9 +1,9 @@
 package com.example.payment.application.compensation;
 
+import com.example.payment.domain.PaymentConstants;
 import com.example.payment.domain.gateway.LimitsGateway;
 import com.example.payment.domain.gateway.WalletDebitCommand;
 import com.example.payment.domain.gateway.WalletGateway;
-import com.example.payment.domain.PaymentConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -53,8 +53,11 @@ public class CompensationConsumer {
 
     private void handleFeeRefund(JsonNode data) throws Exception {
         FeeRefundPayload payload = objectMapper.treeToValue(data, FeeRefundPayload.class);
-        log.info("[CompensationConsumer] Retrying fee refund for paymentId={} targetUserId={} amount={}",
-                payload.getPaymentId(), payload.getTargetUserId(), payload.getAmount());
+        log.info(
+                "[CompensationConsumer] Retrying fee refund for paymentId={} targetUserId={} amount={}",
+                payload.getPaymentId(),
+                payload.getTargetUserId(),
+                payload.getAmount());
 
         var response = walletGateway.debit(WalletDebitCommand.builder()
                 .paymentId(payload.getPaymentId())
@@ -65,14 +68,19 @@ public class CompensationConsumer {
                 .idempotencyKey(payload.getPaymentId() + SUFFIX_FEE_REFUND)
                 .build());
 
-        log.info("[CompensationConsumer] Fee refund completed paymentId={} status={}",
-                payload.getPaymentId(), response.getStatus());
+        log.info(
+                "[CompensationConsumer] Fee refund completed paymentId={} status={}",
+                payload.getPaymentId(),
+                response.getStatus());
     }
 
     private void handleLimitsRelease(JsonNode data) throws Exception {
         LimitsReleasePayload payload = objectMapper.treeToValue(data, LimitsReleasePayload.class);
-        log.info("[CompensationConsumer] Retrying limits release for paymentId={} sourceUserId={} amount={}",
-                payload.getPaymentId(), payload.getSourceUserId(), payload.getAmount());
+        log.info(
+                "[CompensationConsumer] Retrying limits release for paymentId={} sourceUserId={} amount={}",
+                payload.getPaymentId(),
+                payload.getSourceUserId(),
+                payload.getAmount());
 
         var response = limitsGateway.releaseLimit(
                 payload.getPaymentId(),
@@ -81,7 +89,8 @@ public class CompensationConsumer {
                 payload.getPaymentId() + SUFFIX_LIMITS_RELEASE);
 
         if (!response.getReleased()) {
-            log.warn("[CompensationConsumer] Limits release returned released=false for paymentId={}",
+            log.warn(
+                    "[CompensationConsumer] Limits release returned released=false for paymentId={}",
                     payload.getPaymentId());
         } else {
             log.info("[CompensationConsumer] Limits released successfully for paymentId={}", payload.getPaymentId());

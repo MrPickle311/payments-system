@@ -1,5 +1,14 @@
 package com.example.payment.application.saga;
 
+import static com.example.payment.domain.enums.PaymentState.AUTH_REJECTED;
+import static com.example.payment.domain.enums.PaymentState.COMPLETED;
+import static com.example.payment.domain.enums.PaymentState.FAILED;
+import static com.example.payment.domain.enums.PaymentState.FEE_CHARGED;
+import static com.example.payment.domain.enums.PaymentState.FEE_FAILED;
+import static com.example.payment.domain.enums.PaymentState.LIMITS_FAILED;
+import static com.example.payment.domain.enums.PaymentState.LIMITS_OK;
+import static com.example.payment.domain.enums.PaymentState.SANCTIONS_FAILED;
+
 import com.example.payment.application.service.WebhookService;
 import com.example.payment.domain.PaymentConstants;
 import com.example.payment.domain.enums.PaymentEvent;
@@ -19,20 +28,10 @@ import com.example.payments.fraud.grpc.FraudResponse;
 import com.example.payments.fx.grpc.FxResponse;
 import com.example.payments.limits.grpc.LimitsResponse;
 import com.example.payments.wallet.grpc.DebitResponse;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
-
-import static com.example.payment.domain.enums.PaymentState.AUTH_REJECTED;
-import static com.example.payment.domain.enums.PaymentState.COMPLETED;
-import static com.example.payment.domain.enums.PaymentState.FAILED;
-import static com.example.payment.domain.enums.PaymentState.FEE_CHARGED;
-import static com.example.payment.domain.enums.PaymentState.FEE_FAILED;
-import static com.example.payment.domain.enums.PaymentState.LIMITS_FAILED;
-import static com.example.payment.domain.enums.PaymentState.LIMITS_OK;
-import static com.example.payment.domain.enums.PaymentState.SANCTIONS_FAILED;
 
 @Slf4j
 @Component
@@ -41,19 +40,21 @@ public class PaymentProcessingSaga {
 
     private static final String AGGREGATE_TYPE_PAYMENT = "Payment";
     private static final String TOPIC_COMPENSATIONS = "payment-compensations";
-    
+
     private static final String SUFFIX_LIMITS_CHECK = "-LIMITS_CHECK";
     private static final String SUFFIX_FEE_CHARGE = "-FEE_CHARGE";
     private static final String SUFFIX_FEE_REFUND = "-FEE_REFUND";
     private static final String SUFFIX_LIMITS_RELEASE = "-LIMITS_RELEASE";
     private static final String SUFFIX_SETTLEMENT = "-SETTLEMENT";
-    
+
     private static final String EVENT_FEE_REFUND_COMPENSATION = "FEE_REFUND_COMPENSATION";
     private static final String EVENT_LIMITS_RELEASE_COMPENSATION = "LIMITS_RELEASE_COMPENSATION";
-    
-    private static final String PAYLOAD_TEMPLATE_FEE_REFUND = "{\"paymentId\":%d,\"targetUserId\":%d,\"amount\":\"%s\",\"currency\":\"%s\"}";
-    private static final String PAYLOAD_TEMPLATE_LIMITS_RELEASE = "{\"paymentId\":%d,\"sourceUserId\":%d,\"amount\":\"%s\"}";
-    
+
+    private static final String PAYLOAD_TEMPLATE_FEE_REFUND =
+            "{\"paymentId\":%d,\"targetUserId\":%d,\"amount\":\"%s\",\"currency\":\"%s\"}";
+    private static final String PAYLOAD_TEMPLATE_LIMITS_RELEASE =
+            "{\"paymentId\":%d,\"sourceUserId\":%d,\"amount\":\"%s\"}";
+
     private static final String SUCCESS_STATUS = "SUCCESS";
 
     private final OutboxRepositoryProxy outboxRepositoryProxy;
@@ -99,7 +100,8 @@ public class PaymentProcessingSaga {
     public void startFraudCheck(SagaContextProxy proxy) {
         try {
             var res = callFraudService(proxy);
-            proxy.setFraudStatus(res.getSuccess() ? PaymentConstants.STATUS_FRAUD_PASSED : PaymentConstants.STATUS_FRAUD_DETECTED);
+            proxy.setFraudStatus(
+                    res.getSuccess() ? PaymentConstants.STATUS_FRAUD_PASSED : PaymentConstants.STATUS_FRAUD_DETECTED);
             proxy.sendEvent(res.getSuccess() ? PaymentEvent.FRAUD_CLEAR : PaymentEvent.FRAUD_ALERT);
         } catch (Exception ex) {
             log.error("Error on startFraudCheck for paymentId={}", proxy.getPaymentId(), ex);
@@ -115,7 +117,10 @@ public class PaymentProcessingSaga {
     public void startAuthorization(SagaContextProxy proxy) {
         try {
             var response = authorizationGateway.authorize(proxy.getPaymentId());
-            proxy.setAuthStatus(response.getSuccess() ? PaymentConstants.STATUS_AUTH_APPROVED : PaymentConstants.STATUS_AUTH_REJECTED);
+            proxy.setAuthStatus(
+                    response.getSuccess()
+                            ? PaymentConstants.STATUS_AUTH_APPROVED
+                            : PaymentConstants.STATUS_AUTH_REJECTED);
             proxy.sendEvent(response.getSuccess() ? PaymentEvent.AUTH_SUCCESS : PaymentEvent.AUTH_REJECT);
         } catch (Exception ex) {
             log.error("Error on startAuthorization for paymentId={}", proxy.getPaymentId(), ex);
@@ -127,7 +132,8 @@ public class PaymentProcessingSaga {
     public void startLimitsCheck(SagaContextProxy proxy) {
         try {
             var res = callLimitsService(proxy);
-            proxy.setLimitsStatus(res.getSuccess() ? PaymentConstants.STATUS_LIMITS_OK : PaymentConstants.STATUS_LIMITS_EXCEEDED);
+            proxy.setLimitsStatus(
+                    res.getSuccess() ? PaymentConstants.STATUS_LIMITS_OK : PaymentConstants.STATUS_LIMITS_EXCEEDED);
             proxy.sendEvent(res.getSuccess() ? PaymentEvent.LIMITS_CLEAR : PaymentEvent.LIMITS_REJECT);
         } catch (Exception ex) {
             log.error("Error on startLimitsCheck for paymentId={}", proxy.getPaymentId(), ex);
@@ -139,13 +145,18 @@ public class PaymentProcessingSaga {
     private LimitsResponse callLimitsService(SagaContextProxy proxy) {
         String idempotencyKey = proxy.getPaymentId() + SUFFIX_LIMITS_CHECK;
         return limitsGateway.checkLimits(
-                proxy.getPaymentId(), proxy.getSourceUserId(), proxy.getPaymentAmount(), proxy.getPaymentCurrency(), idempotencyKey);
+                proxy.getPaymentId(),
+                proxy.getSourceUserId(),
+                proxy.getPaymentAmount(),
+                proxy.getPaymentCurrency(),
+                idempotencyKey);
     }
 
     public void startSanctionsCheck(SagaContextProxy proxy) {
         try {
             boolean isSanctioned = callSanctionsService(proxy);
-            proxy.setSanctionsStatus(isSanctioned ? PaymentConstants.STATUS_SANCTIONS_CLEARED : PaymentConstants.STATUS_SANCTIONS_HIT);
+            proxy.setSanctionsStatus(
+                    isSanctioned ? PaymentConstants.STATUS_SANCTIONS_CLEARED : PaymentConstants.STATUS_SANCTIONS_HIT);
             proxy.sendEvent(isSanctioned ? PaymentEvent.SANCTIONS_PASS : PaymentEvent.SANCTIONS_HIT);
         } catch (Exception ex) {
             log.error("Error on startSanctionsCheck for paymentId={}", proxy.getPaymentId(), ex);
@@ -231,6 +242,12 @@ public class PaymentProcessingSaga {
         Long sourceUserId = proxy.getSourceUserId();
         if (feeAmount != null && sourceUserId != null) {
             refundFee(proxy, feeAmount, sourceUserId);
+        } else {
+            log.warn(
+                    "Compensate fee args may be null: paymentId: {}, feeAmount: {}, sourceUserId: {}",
+                    proxy.getPaymentId(),
+                    proxy.getFeeAmount(),
+                    proxy.getSourceUserId());
         }
     }
 
@@ -248,15 +265,15 @@ public class PaymentProcessingSaga {
             proxy.setFeeStatus(PaymentConstants.STATUS_FEE_REFUNDED);
         } catch (Exception ex) {
             handleRefundFeeError(proxy, feeAmount, sourceUserId, ex);
+        } finally {
+            proxy.sendEvent(PaymentEvent.FEE_COMPENSATE_SUCCESS);
         }
     }
 
     private void handleRefundFeeError(SagaContextProxy proxy, String fee, Long userId, Exception ex) {
         String currency = proxy.getSourceCurrency() != null ? proxy.getSourceCurrency() : proxy.getPaymentCurrency();
         log.error("Fee compensation failed for paymentId={}, saving to outbox for retry", proxy.getPaymentId(), ex);
-        String payload = String.format(
-                PAYLOAD_TEMPLATE_FEE_REFUND,
-                proxy.getPaymentId(), userId, fee, currency);
+        String payload = String.format(PAYLOAD_TEMPLATE_FEE_REFUND, proxy.getPaymentId(), userId, fee, currency);
         saveCompensationOutbox(proxy.getPaymentId(), EVENT_FEE_REFUND_COMPENSATION, payload);
     }
 
@@ -264,40 +281,46 @@ public class PaymentProcessingSaga {
         Long sourceUserId = proxy.getSourceUserId();
         if (sourceUserId != null) {
             releaseLimits(proxy, sourceUserId);
+        } else {
+            log.warn("sourceUserId is null for payment: {}", proxy.getPaymentId());
         }
     }
 
     private void releaseLimits(SagaContextProxy proxy, Long sourceUserId) {
         String idempotencyKey = proxy.getPaymentId() + SUFFIX_LIMITS_RELEASE;
         try {
-            var res = limitsGateway.releaseLimit(proxy.getPaymentId(), sourceUserId, proxy.getPaymentAmount(), idempotencyKey);
+            var res = limitsGateway.releaseLimit(
+                    proxy.getPaymentId(), sourceUserId, proxy.getPaymentAmount(), idempotencyKey);
             if (res.getReleased()) {
                 proxy.setLimitsStatus(PaymentConstants.STATUS_LIMITS_RELEASED);
             } else {
-                handleReleaseLimitsError(proxy, sourceUserId,
+                handleReleaseLimitsError(
+                        proxy,
+                        sourceUserId,
                         new IllegalStateException("releaseLimit non-success for paymentId=" + proxy.getPaymentId()));
             }
         } catch (Exception ex) {
             handleReleaseLimitsError(proxy, sourceUserId, ex);
+        } finally {
+            proxy.sendEvent(PaymentEvent.LIMITS_COMPENSATE_SUCCESS);
         }
     }
 
     private void handleReleaseLimitsError(SagaContextProxy proxy, Long userId, Exception ex) {
         log.warn("Limits release failed for paymentId={}, saving to outbox for retry", proxy.getPaymentId(), ex);
-        String payload = String.format(
-                PAYLOAD_TEMPLATE_LIMITS_RELEASE,
-                proxy.getPaymentId(), userId, proxy.getPaymentAmount());
+        String payload =
+                String.format(PAYLOAD_TEMPLATE_LIMITS_RELEASE, proxy.getPaymentId(), userId, proxy.getPaymentAmount());
         saveCompensationOutbox(proxy.getPaymentId(), EVENT_LIMITS_RELEASE_COMPENSATION, payload);
     }
 
-
     public void saveCompensationOutbox(Long paymentId, String eventType, String innerPayload) {
         if (paymentId == null) {
-            log.error("[PaymentProcessingSaga] Cannot save compensation outbox event with null paymentId for eventType={}", eventType);
+            log.error(
+                    "[PaymentProcessingSaga] Cannot save compensation outbox event with null paymentId for eventType={}",
+                    eventType);
             return;
         }
-        String wrappedPayload = String.format(
-                "{\"eventType\":\"%s\",\"data\":%s}", eventType, innerPayload);
+        String wrappedPayload = String.format("{\"eventType\":\"%s\",\"data\":%s}", eventType, innerPayload);
         outboxRepositoryProxy.save(OutboxEventEntity.builder()
                 .aggregateId(String.valueOf(paymentId))
                 .aggregateType(AGGREGATE_TYPE_PAYMENT)
@@ -308,7 +331,6 @@ public class PaymentProcessingSaga {
                 .build());
     }
 
-
     public void settlementAction(SagaContextProxy proxy) {
         try {
             var response = callWalletServiceForSettlement(proxy);
@@ -318,7 +340,10 @@ public class PaymentProcessingSaga {
                 log.info("[Saga] Settlement complete paymentId={}", proxy.getPaymentId());
                 proxy.sendEvent(PaymentEvent.WALLET_SETTLED_SUCCESS);
             } else {
-                log.error("[Saga] Settlement rejected by wallet-service for paymentId={}, reason={}", proxy.getPaymentId(), status);
+                log.error(
+                        "[Saga] Settlement rejected by wallet-service for paymentId={}, reason={}",
+                        proxy.getPaymentId(),
+                        status);
                 proxy.sendEvent(PaymentEvent.WALLET_SETTLED_FAIL);
             }
         } catch (Exception ex) {

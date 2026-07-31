@@ -2,12 +2,11 @@ package com.example.payment.infrastructure.persistence;
 
 import com.example.payment.domain.Payment;
 import com.example.payments.common.sharedkernel.Money;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
-
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
 
 @Mapper(
         componentModel = "spring",

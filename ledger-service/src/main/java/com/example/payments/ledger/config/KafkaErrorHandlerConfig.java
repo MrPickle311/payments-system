@@ -1,4 +1,4 @@
-package com.example.payment.infrastructure.config;
+package com.example.payments.ledger.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -9,11 +9,13 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class GrpcWalletGatewayAdapter implements WalletGateway {
 
     private static final String ZERO_AMOUNT = "0";
@@ -26,6 +28,7 @@ public class GrpcWalletGatewayAdapter implements WalletGateway {
     @CircuitBreaker(name = "walletService")
     @Retry(name = "walletService")
     public DebitResponse debit(WalletDebitCommand command) {
+        log.info("Calling debit wallet for: {}", command.toString());
         return walletService
                 .withDeadlineAfter(3, TimeUnit.SECONDS)
                 .debit(DebitRequest.newBuilder()

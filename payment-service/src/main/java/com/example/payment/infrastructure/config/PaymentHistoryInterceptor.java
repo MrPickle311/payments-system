@@ -1,21 +1,20 @@
 package com.example.payment.infrastructure.config;
 
+import static org.springframework.statemachine.StateContext.Stage.STATE_CHANGED;
+
 import com.example.payment.application.saga.SagaContextProxy;
 import com.example.payment.domain.PaymentHistory;
 import com.example.payment.domain.PaymentHistoryRepository;
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.listener.StateMachineListenerAdapter;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-
-import static org.springframework.statemachine.StateContext.Stage.STATE_CHANGED;
 
 @Component
 @Slf4j

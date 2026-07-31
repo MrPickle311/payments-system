@@ -54,7 +54,6 @@ public class StateMachineConfig extends GeneratedStateMachineConfig {
         paymentProcessingSaga.feeCharge(SagaContextProxy.of(context));
     }
 
-
     @Override
     protected void executeWalletSettlement(StateContext<PaymentState, PaymentEvent> context) {
         paymentProcessingSaga.settlementAction(SagaContextProxy.of(context));

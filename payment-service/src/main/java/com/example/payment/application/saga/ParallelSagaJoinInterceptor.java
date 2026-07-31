@@ -50,19 +50,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ParallelSagaJoinInterceptor extends StateMachineInterceptorAdapter<PaymentState, PaymentEvent> {
 
-    private static final Set<PaymentState> PROCESSING_REGION_TERMINAL_STATES =
-            EnumSet.of(AUTH_APPROVED, FRAUD_PASSED, LIMITS_OK, SANCTIONS_CLEARED, FEE_CHARGED);
+    private static final Set<PaymentState> PROCESSING_REGION_TERMINAL_STATES = EnumSet.of(
+            AUTH_APPROVED, FRAUD_PASSED, LIMITS_OK, LIMITS_FAILED, SANCTIONS_CLEARED, SANCTIONS_FAILED, FEE_CHARGED);
 
     private static final Set<PaymentState> PROCESSING_FAILURE_STATES = EnumSet.of(
-            AUTH_REJECTED,
-            AUTH_FAILED,
-            FRAUD_DETECTED,
-            FRAUD_FAILED,
-            LIMITS_EXCEEDED,
-            LIMITS_FAILED,
-            SANCTIONS_HIT,
-            SANCTIONS_FAILED,
-            FEE_FAILED);
+            AUTH_REJECTED, AUTH_FAILED, FRAUD_DETECTED, FRAUD_FAILED, LIMITS_EXCEEDED, SANCTIONS_HIT, FEE_FAILED);
 
     private static final int PROCESSING_REGION_COUNT = 5;
 
@@ -132,7 +124,7 @@ public class ParallelSagaJoinInterceptor extends StateMachineInterceptorAdapter<
 
     private void checkSettlementCompletion(
             StateMachine<PaymentState, PaymentEvent> rootStateMachine, Collection<PaymentState> ids) {
-        if (ids.contains(LEDGER_NOTIFIED)) {
+        if (ids.contains(LEDGER_NOTIFIED) || ids.contains(LEDGER_NOTIFICATION_FAILED)) {
             boolean isSet = setVariableInExtendedState(SETTLEMENT_JOIN_KEY, rootStateMachine);
             if (isSet) {
                 sendEvent(rootStateMachine, SETTLEMENT_SUCCESS);
@@ -140,7 +132,7 @@ public class ParallelSagaJoinInterceptor extends StateMachineInterceptorAdapter<
             return;
         }
 
-        if (ids.contains(SETTLEMENT_FAILED) || ids.contains(LEDGER_NOTIFICATION_FAILED)) {
+        if (ids.contains(SETTLEMENT_FAILED)) {
             boolean isSet = setVariableInExtendedState(SETTLEMENT_JOIN_KEY, rootStateMachine);
             if (isSet) {
                 sendEvent(rootStateMachine, SETTLEMENT_FAIL);

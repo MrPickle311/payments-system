@@ -50,7 +50,9 @@ public class GrpcSanctionsGatewayAdapter implements SanctionsGateway {
                 }
             }
         } catch (Exception ex) {
-            log.warn("[SanctionsCache] Cache error on read, falling back directly to sanctions-service: {}", ex.getMessage());
+            log.warn(
+                    "[SanctionsCache] Cache error on read, falling back directly to sanctions-service: {}",
+                    ex.getMessage());
         }
 
         log.info("[SanctionsCache] Fetching sanctioned user IDs from sanctions-service");

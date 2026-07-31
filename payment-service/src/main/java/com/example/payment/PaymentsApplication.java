@@ -13,13 +13,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableRetry
 @EnableCaching
 @EnableJpaRepositories({
-        "com.example.payment.infrastructure.persistence",
-        "com.example.payments.common.sharedkernel.outbox"
-        })
-@EntityScan(basePackages = {
-        "com.example.payment.infrastructure.persistence",
-        "com.example.payments.common.sharedkernel.outbox"
+    "com.example.payment.infrastructure.persistence",
+    "com.example.payments.common.sharedkernel.outbox"
 })
+@EntityScan(
+        basePackages = {
+            "com.example.payment.infrastructure.persistence",
+            "com.example.payments.common.sharedkernel.outbox"
+        })
 public class PaymentsApplication {
 
     public static void main(String[] args) {

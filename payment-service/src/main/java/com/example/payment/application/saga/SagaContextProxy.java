@@ -1,18 +1,5 @@
 package com.example.payment.application.saga;
 
-import com.example.payment.domain.enums.PaymentEvent;
-import com.example.payment.domain.enums.PaymentState;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.statemachine.ExtendedState;
-import org.springframework.statemachine.StateContext;
-import org.springframework.statemachine.StateMachine;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 import static com.example.payment.domain.PaymentConstants.AUTH_STATUS;
 import static com.example.payment.domain.PaymentConstants.FEE_AMOUNT;
 import static com.example.payment.domain.PaymentConstants.FEE_STATUS;
@@ -23,7 +10,6 @@ import static com.example.payment.domain.PaymentConstants.IS_RESTORING;
 import static com.example.payment.domain.PaymentConstants.LIMITS_STATUS;
 import static com.example.payment.domain.PaymentConstants.NET_AMOUNT;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_AMOUNT;
-import static com.example.payment.domain.PaymentConstants.PAYMENT_CREATED_AT;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.PAYMENT_ID;
 import static com.example.payment.domain.PaymentConstants.PROCESSING_FEE;
@@ -32,6 +18,17 @@ import static com.example.payment.domain.PaymentConstants.SOURCE_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.SOURCE_USER_ID;
 import static com.example.payment.domain.PaymentConstants.TARGET_CURRENCY;
 import static com.example.payment.domain.PaymentConstants.TARGET_USER_ID;
+
+import com.example.payment.domain.enums.PaymentEvent;
+import com.example.payment.domain.enums.PaymentState;
+import java.math.BigDecimal;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.statemachine.ExtendedState;
+import org.springframework.statemachine.StateContext;
+import org.springframework.statemachine.StateMachine;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
@@ -164,8 +161,8 @@ public class SagaContextProxy {
     }
 
     public PaymentState getLimitsStatus() {
-        var rawState =  extendedState != null ? extendedState.get(LIMITS_STATUS, String.class) : null;
-        if (rawState == null){
+        var rawState = extendedState != null ? extendedState.get(LIMITS_STATUS, String.class) : null;
+        if (rawState == null) {
             return null;
         }
         return PaymentState.valueOf(rawState);
@@ -185,7 +182,7 @@ public class SagaContextProxy {
 
     public PaymentState getFeeStatus() {
         var rawState = extendedState != null ? extendedState.get(FEE_STATUS, String.class) : null;
-        if (rawState == null){
+        if (rawState == null) {
             return null;
         }
         return PaymentState.valueOf(rawState);

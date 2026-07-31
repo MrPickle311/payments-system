@@ -1,5 +1,7 @@
 package com.example.payment.infrastructure.external.adapter;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import com.example.payment.domain.gateway.LimitsGateway;
 import com.example.payments.limits.grpc.LimitsRequest;
 import com.example.payments.limits.grpc.LimitsResponse;
@@ -12,8 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 @Component
@@ -47,8 +47,7 @@ public class GrpcLimitsGatewayAdapter implements LimitsGateway {
     @Override
     @CircuitBreaker(name = "limitsService")
     @Retry(name = "limitsService")
-    public ReleaseLimitResponse releaseLimit(
-            Long paymentId, Long sourceUserId, String amount, String idempotencyKey) {
+    public ReleaseLimitResponse releaseLimit(Long paymentId, Long sourceUserId, String amount, String idempotencyKey) {
         log.info(
                 "[Adapter] releaseLimit over gRPC for paymentId={} userId={} amount={}",
                 paymentId,

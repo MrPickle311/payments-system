@@ -1,14 +1,13 @@
 package com.example.payment.domain;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.jmolecules.ddd.annotation.Entity;
-
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 
 @ToString
 @Getter

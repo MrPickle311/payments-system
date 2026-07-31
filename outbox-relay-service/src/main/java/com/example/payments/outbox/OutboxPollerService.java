@@ -1,9 +1,8 @@
 package com.example.payments.outbox;
 
-import java.util.List;
-
 import com.example.payments.common.sharedkernel.outbox.OutboxEventEntity;
 import com.example.payments.common.sharedkernel.outbox.OutboxRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -29,7 +28,10 @@ public class OutboxPollerService {
 
     private void publishSingleEvent(OutboxEventEntity event) {
         if (event.getAggregateId() == null || "null".equals(event.getAggregateId())) {
-            log.error("[OutboxPoller] Skipping poison outbox event id={} with invalid aggregateId='{}'", event.getId(), event.getAggregateId());
+            log.error(
+                    "[OutboxPoller] Skipping poison outbox event id={} with invalid aggregateId='{}'",
+                    event.getId(),
+                    event.getAggregateId());
             event.setProcessed(true);
             outboxRepository.save(event);
             return;

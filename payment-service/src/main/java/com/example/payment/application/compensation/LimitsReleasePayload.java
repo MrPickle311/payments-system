@@ -16,5 +16,4 @@ public class LimitsReleasePayload {
 
     @JsonProperty("amount")
     private String amount;
-
 }

@@ -5,7 +5,7 @@
       "description": "Source code compilation"
     },
     "run_linter": {
-      "command": "mvn checkstyle:check",
+      "command": "mvn spotless:check",
       "description": "Checks coding conventions and style."
     }
   }

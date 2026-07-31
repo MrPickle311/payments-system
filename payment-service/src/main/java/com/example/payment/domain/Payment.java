@@ -1,10 +1,20 @@
 package com.example.payment.domain;
 
+import static com.example.payment.domain.enums.PaymentState.COMPLETED;
+import static com.example.payment.domain.enums.PaymentState.FAILED;
+import static com.example.payment.domain.enums.PaymentState.NEW;
+import static com.example.payment.domain.enums.PaymentState.valueOf;
+
 import com.example.payment.domain.enums.PaymentState;
 import com.example.payment.domain.event.PaymentCreatedEvent;
 import com.example.payment.domain.event.PaymentDomainEvent;
 import com.example.payment.domain.event.PaymentStateChangedEvent;
 import com.example.payments.common.sharedkernel.Money;
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,17 +23,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.jmolecules.ddd.annotation.AggregateRoot;
-
-import java.math.BigDecimal;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import static com.example.payment.domain.enums.PaymentState.COMPLETED;
-import static com.example.payment.domain.enums.PaymentState.FAILED;
-import static com.example.payment.domain.enums.PaymentState.NEW;
-import static com.example.payment.domain.enums.PaymentState.valueOf;
 
 @ToString
 @Getter
@@ -70,8 +69,7 @@ public class Payment {
 
     public boolean isTerminal() {
         PaymentState current = currentState();
-        return current == COMPLETED
-                || current == FAILED;
+        return current == COMPLETED || current == FAILED;
     }
 
     public void markFraudEvaluation(Integer score, String risk) {

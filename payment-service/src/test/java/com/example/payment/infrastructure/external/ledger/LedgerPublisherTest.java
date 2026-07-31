@@ -36,9 +36,9 @@ class LedgerPublisherTest {
     @Test
     void publishEventFailure() {
         doThrow(new RuntimeException("DB down")).when(outboxRepositoryProxy).save(any(OutboxEventEntity.class));
-        assertThrows(RuntimeException.class, () ->
-            ledgerPublisher.publishEvent(1L, new BigDecimal(AMOUNT), new BigDecimal(NET_AMOUNT), CURRENCY)
-        );
+        assertThrows(
+                RuntimeException.class,
+                () -> ledgerPublisher.publishEvent(1L, new BigDecimal(AMOUNT), new BigDecimal(NET_AMOUNT), CURRENCY));
         verify(outboxRepositoryProxy).save(any(OutboxEventEntity.class));
     }
 }
