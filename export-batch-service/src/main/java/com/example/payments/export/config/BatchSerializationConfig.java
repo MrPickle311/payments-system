@@ -1,5 +1,6 @@
 package com.example.payments.export.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,15 +16,18 @@ public class BatchSerializationConfig {
 
     @Bean
     public ExecutionContextSerializer executionContextSerializer(final ObjectMapper objectMapper) {
+        ObjectMapper batchMapper = objectMapper.copy()
+                .enable(DeserializationFeature.USE_LONG_FOR_INTS);
+
         return new ExecutionContextSerializer() {
             @Override
             public Map<String, Object> deserialize(InputStream inputStream) throws IOException {
-                return objectMapper.readValue(inputStream, HashMap.class);
+                return batchMapper.readValue(inputStream, HashMap.class);
             }
 
             @Override
             public void serialize(Map<String, Object> object, OutputStream outputStream) throws IOException {
-                objectMapper.writeValue(outputStream, object);
+                batchMapper.writeValue(outputStream, object);
             }
         };
     }
