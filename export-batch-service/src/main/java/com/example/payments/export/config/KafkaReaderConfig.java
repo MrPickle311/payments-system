@@ -14,6 +14,7 @@ import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.scope.context.StepSynchronizationManager;
 import org.springframework.batch.item.kafka.KafkaItemReader;
@@ -44,7 +45,7 @@ public class KafkaReaderConfig {
             partitionId = getPartitionId();
         }
         Properties props = buildConsumerProperties(partitionId);
-        Map<org.apache.kafka.common.TopicPartition, Long> offsets = new HashMap<>();
+        Map<TopicPartition, Long> offsets = new HashMap<>();
         if (StepSynchronizationManager.getContext() != null) {
             Long paramOffset = StepSynchronizationManager.getContext()
                     .getStepExecution()
@@ -52,10 +53,12 @@ public class KafkaReaderConfig {
                     .getJobParameters()
                     .getLong("offset-" + partitionId);
             if (paramOffset != null) {
-                offsets.put(new org.apache.kafka.common.TopicPartition(exportProperties.getTopic(), partitionId), paramOffset);
+                offsets.put(
+                        new TopicPartition(exportProperties.getTopic(), partitionId),
+                        paramOffset);
             }
         }
-        
+
         return new KafkaItemReaderBuilder<String, String>()
                 .partitions(partitionId)
                 .partitionOffsets(offsets)

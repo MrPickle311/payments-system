@@ -34,7 +34,8 @@ public class ExportJobLauncher {
     @Scheduled(cron = "${export.schedule:0/30 * * * * *}")
     public void launchJob() {
         if (!hasPendingMessages()) {
-            log.debug("[JobLauncher] No new messages on topic {}, skipping job execution.", exportProperties.getTopic());
+            log.debug(
+                    "[JobLauncher] No new messages on topic {}, skipping job execution.", exportProperties.getTopic());
             return;
         }
 
@@ -78,6 +79,11 @@ public class ExportJobLauncher {
                 long endOffset = endOffsets.getOrDefault(tp, 0L);
                 long lastProcessed = getLastProcessedOffset(tp.partition());
                 if (endOffset > lastProcessed) {
+                    log.debug(
+                            "[JobLauncher] Partition {} has pending messages: lastProcessed={}, end={}",
+                            tp.partition(),
+                            lastProcessed,
+                            endOffset);
                     return true;
                 }
             }
@@ -88,6 +94,11 @@ public class ExportJobLauncher {
         return false;
     }
 
+    /**
+     * Returns the highest offset processed for the given partition.
+     * Reads from the KafkaItemReader's saved state in the step ExecutionContext
+     * across recent job executions (including failed ones, as chunks may have committed).
+     */
     private long getLastProcessedOffset(int partitionId) {
         List<JobInstance> instances = jobExplorer.findJobInstancesByJobName(exportLedgerJob.getName(), 0, 10);
         for (JobInstance instance : instances) {
