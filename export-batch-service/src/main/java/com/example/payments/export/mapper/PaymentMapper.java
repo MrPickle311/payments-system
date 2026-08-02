@@ -10,7 +10,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = SPRING)
 public interface PaymentMapper {
 
-
     @Mapping(source = "eventTimestamp", target = "timestamp")
     RegulatoryReportRequest.ExportedPayment stagingToExportedPayment(PaymentExportStaging s);
 }
