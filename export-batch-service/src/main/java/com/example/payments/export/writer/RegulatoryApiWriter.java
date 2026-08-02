@@ -25,7 +25,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Component
-@Profile({"manager", "retry-manager"})
+@Profile("manager")
 @RequiredArgsConstructor
 public class RegulatoryApiWriter implements ItemWriter<PaymentExportStaging> {
 

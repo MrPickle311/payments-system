@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @StepScope
-@Profile({"manager", "retry-manager"})
+@Profile("manager")
 @RequiredArgsConstructor
 public class PaymentIdTrackingListener implements ItemWriteListener<PaymentExportStaging> {
 
