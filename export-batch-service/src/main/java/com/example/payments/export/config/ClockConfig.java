@@ -1,6 +1,5 @@
 package com.example.payments.export.config;
 
-import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 public class ClockConfig {
 
     @Bean
-    public Clock clock() {
-        return Clock.systemUTC();
+    public MutableClock clock() {
+        return new MutableClock();
     }
 }

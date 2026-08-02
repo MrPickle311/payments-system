@@ -40,7 +40,7 @@ public class LedgerEventListener {
     private PaymentExportStaging parseToStaging(String json) {
         try {
             LedgerEvent ledgerEvent = objectMapper.readValue(json, LedgerEvent.class);
-            return PaymentExportStaging.builder()//TODO: move it into mapper
+            return PaymentExportStaging.builder() // TODO: move it into mapper
                     .paymentId(ledgerEvent.getPaymentId())
                     .grossAmount(ledgerEvent.getGrossAmount())
                     .netAmount(ledgerEvent.getNetAmount())
@@ -51,7 +51,7 @@ public class LedgerEventListener {
                     .retryCount(0)
                     .build();
         } catch (Exception ex) {
-            log.warn("Moving these events: {} to DLT", json ,ex);
+            log.warn("Moving these events: {} to DLT", json, ex);
             throw new RuntimeException("Failed to parse event: " + json, ex);
         }
     }
