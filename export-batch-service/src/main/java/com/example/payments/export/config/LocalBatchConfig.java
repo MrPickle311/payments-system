@@ -28,7 +28,7 @@ import org.springframework.web.client.ResourceAccessException;
 
 @Slf4j
 @Configuration
-@Profile({"manager", "retry-manager"})
+@Profile("manager")
 @RequiredArgsConstructor
 public class LocalBatchConfig {
 

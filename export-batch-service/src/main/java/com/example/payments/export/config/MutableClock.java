@@ -1,10 +1,9 @@
 package com.example.payments.export.config;
 
-import lombok.EqualsAndHashCode;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 public class MutableClock extends Clock {
