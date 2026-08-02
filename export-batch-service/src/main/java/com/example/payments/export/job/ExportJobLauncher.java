@@ -1,5 +1,7 @@
 package com.example.payments.export.job;
 
+import static com.example.payments.export.staging.PaymentExportStaging.ExportStatus.PENDING;
+
 import com.example.payments.export.config.ExportProperties;
 import com.example.payments.export.staging.PaymentExportStagingRepository;
 import java.time.Clock;
@@ -15,8 +17,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import static com.example.payments.export.staging.PaymentExportStaging.ExportStatus.PENDING;
 
 @Slf4j
 @Component
@@ -38,8 +38,7 @@ public class ExportJobLauncher {
                 .withDayOfMonth(1)
                 .atStartOfDay();
 
-        if (!stagingRepository.existsByStatusAndCreatedAtGreaterThanEqual(
-                PENDING, since)) {
+        if (!stagingRepository.existsByStatusAndCreatedAtGreaterThanEqual(PENDING, since)) {
             log.info("[JobLauncher] No PENDING events found. Skipping job execution.");
             return;
         }
