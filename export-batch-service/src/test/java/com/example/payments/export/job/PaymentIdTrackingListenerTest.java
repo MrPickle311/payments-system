@@ -8,7 +8,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.payments.common.dto.LedgerEvent;
+import com.example.payments.export.config.ExportProperties;
+import com.example.payments.export.staging.PaymentExportStaging;
+import com.example.payments.export.staging.PaymentExportStagingRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
@@ -33,7 +35,9 @@ class PaymentIdTrackingListenerTest {
     @BeforeEach
     void setUp() {
         meterRegistry = mock(MeterRegistry.class);
-        listener = new PaymentIdTrackingListener(meterRegistry);
+        PaymentExportStagingRepository stagingRepository = mock(PaymentExportStagingRepository.class);
+        ExportProperties exportProperties = mock(ExportProperties.class);
+        listener = new PaymentIdTrackingListener(meterRegistry, stagingRepository, exportProperties);
         stepExecution = new StepExecution(STEP_NAME, null);
         stepExecution.setExecutionContext(new ExecutionContext());
         ReflectionTestUtils.setField(listener, "stepExecution", stepExecution);
@@ -41,10 +45,10 @@ class PaymentIdTrackingListenerTest {
 
     @Test
     void testAfterWrite() {
-        LedgerEvent e1 = new LedgerEvent();
-        e1.setPaymentId(10L);
-        LedgerEvent e2 = new LedgerEvent();
-        e2.setPaymentId(20L);
+        var e1 = new PaymentExportStaging();
+        e1.setId(10L);
+        var e2 = new PaymentExportStaging();
+        e2.setId(20L);
         listener.afterWrite(new Chunk<>(List.of(e1, e2)));
         List<Long> ids = (List<Long>) stepExecution.getExecutionContext().get("processedPaymentIds");
         assertEquals(2, ids.size());

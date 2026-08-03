@@ -6,11 +6,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.export.config.ExportProperties;
 import com.example.payments.export.dto.RegulatoryReportRequest;
 import com.example.payments.export.mapper.PaymentMapper;
+import com.example.payments.export.staging.PaymentExportStaging;
+import com.example.payments.export.staging.PaymentExportStagingRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,23 +36,27 @@ class RegulatoryPropertiesApiWriterTest {
         when(exportProperties.getRegulatory()).thenReturn(regulatory);
         when(regulatory.getUrl()).thenReturn(API_URL);
 
-        writer = new RegulatoryApiWriter(restTemplate, exportProperties, Mappers.getMapper(PaymentMapper.class));
+        PaymentExportStagingRepository stagingRepository = mock(PaymentExportStagingRepository.class);
+        Clock clock = Clock.systemUTC();
+
+        writer = new RegulatoryApiWriter(
+                restTemplate, exportProperties, Mappers.getMapper(PaymentMapper.class), stagingRepository, clock);
     }
 
     @Test
     void testWrite() {
-        Chunk<LedgerEvent> chunk = new Chunk<>(List.of(createEvent(100L), createEvent(200L)));
+        Chunk<PaymentExportStaging> chunk = new Chunk<>(List.of(createEvent(100L), createEvent(200L)));
         writer.write(chunk);
         verify(restTemplate).postForLocation(eq(API_URL), any(RegulatoryReportRequest.class));
     }
 
-    private LedgerEvent createEvent(long id) {
-        LedgerEvent e = new LedgerEvent();
+    private PaymentExportStaging createEvent(long id) {
+        var e = new PaymentExportStaging();
         e.setPaymentId(id);
         e.setGrossAmount(BigDecimal.TEN);
         e.setNetAmount(BigDecimal.ONE);
         e.setCurrency("USD");
-        e.setTimestamp(LocalDateTime.now());
+        e.setEventTimestamp(LocalDateTime.now());
         return e;
     }
 }
