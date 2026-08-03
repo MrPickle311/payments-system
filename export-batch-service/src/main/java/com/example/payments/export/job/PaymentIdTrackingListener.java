@@ -5,11 +5,15 @@ import com.example.payments.export.staging.PaymentExportStaging;
 import com.example.payments.export.staging.PaymentExportStagingRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.listener.ItemWriteListener;
+import org.springframework.batch.core.listener.StepExecutionListener;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.item.Chunk;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +25,7 @@ import org.springframework.stereotype.Component;
 @StepScope
 @Profile("manager")
 @RequiredArgsConstructor
-public class PaymentIdTrackingListener implements ItemWriteListener<PaymentExportStaging> {
+public class PaymentIdTrackingListener implements ItemWriteListener<PaymentExportStaging>, StepExecutionListener {
 
     private static final String CONTEXT_KEY = "processedPaymentIds";
 
@@ -29,13 +33,19 @@ public class PaymentIdTrackingListener implements ItemWriteListener<PaymentExpor
     private StepExecution stepExecution;
 
     private final List<Long> processedPaymentIds = new ArrayList<>();
+    private final Set<Long> failedIds = new HashSet<>();
+    private String lastError;
+
     private final MeterRegistry meterRegistry;
     private final PaymentExportStagingRepository stagingRepository;
     private final ExportProperties exportProperties;
 
     @Override
     public void afterWrite(Chunk<? extends PaymentExportStaging> items) {
-        items.forEach(item -> processedPaymentIds.add(item.getPaymentId()));
+        List<Long> ids =
+                items.getItems().stream().map(PaymentExportStaging::getId).toList();
+        processedPaymentIds.addAll(ids);
+        failedIds.removeAll(ids);
         stepExecution.getExecutionContext().put(CONTEXT_KEY, processedPaymentIds);
         log.debug("Tracked {} paymentIds so far in this step.", processedPaymentIds.size());
     }
@@ -55,6 +65,16 @@ public class PaymentIdTrackingListener implements ItemWriteListener<PaymentExpor
                 exception.getClass().getSimpleName());
         List<Long> ids =
                 items.getItems().stream().map(PaymentExportStaging::getId).toList();
-        stagingRepository.markAsFailedOrNonhealable(ids, exception.getMessage(), exportProperties.getMaxRetryCount());
+        failedIds.addAll(ids);
+        lastError = exception.getMessage();
+    }
+
+    @Override
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        if (!failedIds.isEmpty()) {
+            stagingRepository.markAsFailedOrNonhealable(
+                    new ArrayList<>(failedIds), lastError, exportProperties.getMaxRetryCount());
+        }
+        return null;
     }
 }

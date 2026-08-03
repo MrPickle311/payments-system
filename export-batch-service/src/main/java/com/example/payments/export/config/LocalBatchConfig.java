@@ -1,5 +1,7 @@
 package com.example.payments.export.config;
 
+import static com.example.payments.export.config.ExportConstants.WORKER_STEP_NAME;
+
 import com.example.payments.export.job.PaymentIdTrackingListener;
 import com.example.payments.export.job.StagingTablePartitioner;
 import com.example.payments.export.staging.PaymentExportStaging;
@@ -11,12 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.listener.ItemWriteListener;
+import org.springframework.batch.core.listener.StepExecutionListener;
 import org.springframework.batch.core.partition.Partitioner;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.JdbcPagingItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -37,7 +41,7 @@ public class LocalBatchConfig {
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
-    private final JdbcCursorItemReader<PaymentExportStaging> stagingItemReader;
+    private final JdbcPagingItemReader<PaymentExportStaging> stagingItemReader;
     private final RegulatoryApiWriter regulatoryApiWriter;
     private final ExportProperties exportProperties;
     private final PaymentExportStagingRepository stagingRepository;
@@ -54,7 +58,7 @@ public class LocalBatchConfig {
     @Bean
     public Step managerStep(TaskExecutorPartitionHandler partitionHandler, Partitioner partitioner) {
         return new StepBuilder(MANAGER_STEP_NAME, jobRepository)
-                .partitioner(ExportConstants.WORKER_STEP_NAME, partitioner)
+                .partitioner(WORKER_STEP_NAME, partitioner)
                 .partitionHandler(partitionHandler)
                 .gridSize(exportProperties.getGridSize())
                 .build();
@@ -67,7 +71,7 @@ public class LocalBatchConfig {
 
     @Bean
     public TaskExecutorPartitionHandler partitionHandler(Step workerStep, TaskExecutor taskExecutor) {
-        TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
+        var handler = new TaskExecutorPartitionHandler();
         handler.setGridSize(exportProperties.getGridSize());
         handler.setTaskExecutor(taskExecutor);
         handler.setStep(workerStep);
@@ -76,7 +80,7 @@ public class LocalBatchConfig {
 
     @Bean
     public TaskExecutor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        var executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(exportProperties.getGridSize());
         executor.setMaxPoolSize(exportProperties.getGridSize());
         executor.setThreadNamePrefix("partition_thread");
@@ -86,12 +90,13 @@ public class LocalBatchConfig {
 
     @Bean
     public Step workerStep(PaymentIdTrackingListener trackingListener) {
-        return new StepBuilder(ExportConstants.WORKER_STEP_NAME, jobRepository)
+        return new StepBuilder(WORKER_STEP_NAME, jobRepository)
                 .<PaymentExportStaging, PaymentExportStaging>chunk(exportProperties.getBatchSize(), transactionManager)
                 .reader(stagingItemReader)
-                .processor(item -> item) // identity — no transformation needed
+                .processor(item -> item)
                 .writer(regulatoryApiWriter)
-                .listener(trackingListener)
+                .listener((ItemWriteListener<? super PaymentExportStaging>) trackingListener)
+                .listener((StepExecutionListener) trackingListener)
                 .faultTolerant()
                 .retryLimit(3)
                 .retry(ResourceAccessException.class)

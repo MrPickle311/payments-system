@@ -22,7 +22,7 @@ public class FailedPaymentRetryLauncher {
     private final ExportProperties exportProperties;
     private final Clock clock;
 
-    @Scheduled(cron = "${export.retry.schedule:0 */5 * * * *}")
+    @Scheduled(cron = "${export.retry.schedule:0/30 * * * * *}")
     @Transactional
     public void retryFailedPayments() {
         LocalDateTime since = LocalDate.now(clock)
@@ -30,6 +30,7 @@ public class FailedPaymentRetryLauncher {
                 .withDayOfMonth(1)
                 .atStartOfDay();
 
+        log.info("Proceeding to retry: {}", since);
         int reset = stagingRepository.resetFailedToPending(exportProperties.getMaxRetryCount(), since);
 
         if (reset == 0) {

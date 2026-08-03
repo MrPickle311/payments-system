@@ -1,3 +1,11 @@
+# ─────────────────────────────────────────────────────────────────
+# Base configuration — loaded by ALL profiles.
+# Profile-specific overrides live in:
+#   application-listener.yml
+#   application-manager.yml
+#   application-retry-manager.yml
+# ─────────────────────────────────────────────────────────────────
+
 server:
   port: 8083
 
@@ -20,32 +28,27 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: export-batch-group
-      auto-offset-reset: latest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
   batch:
     job:
-      enabled: false # We trigger the job manually via scheduler
+      enabled: false
     jdbc:
       initialize-schema: always
-
-export:
-  batch-size: 3
-  topic: payment-ledger-events
-  schedule: "0/30 * * * * *" # Every 30 seconds
-  datasource-proxy:
-    enabled: true
 
 logging:
   level:

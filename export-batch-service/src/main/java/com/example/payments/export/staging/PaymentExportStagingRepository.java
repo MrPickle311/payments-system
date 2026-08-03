@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface PaymentExportStagingRepository extends JpaRepository<PaymentExportStaging, Long> {
 
@@ -20,14 +21,15 @@ public interface PaymentExportStagingRepository extends JpaRepository<PaymentExp
     Optional<Long> findMaxPendingId(@Param("since") LocalDateTime since);
 
     @Modifying
+    @Transactional
     @Query("UPDATE PaymentExportStaging s SET s.status = 'EXPORTED', s.exportedAt = :now WHERE s.id IN :ids")
     int markAsExported(@Param("ids") List<Long> ids, @Param("now") LocalDateTime now);
 
     @Modifying
+    @Transactional
     @Query("""
             UPDATE PaymentExportStaging s
-            SET s.status = CASE WHEN s.retryCount + 1 >= :maxRetries THEN 'NONHEALABLE' ELSE 'FAILED' END,
-                s.retryCount = s.retryCount + 1,
+            SET s.status = CASE WHEN s.retryCount >= :maxRetries THEN 'NONHEALABLE' ELSE 'FAILED' END,
                 s.lastError = :error
             WHERE s.id IN :ids
             """)
@@ -35,9 +37,11 @@ public interface PaymentExportStagingRepository extends JpaRepository<PaymentExp
             @Param("ids") List<Long> ids, @Param("error") String error, @Param("maxRetries") int maxRetries);
 
     @Modifying
+    @Transactional
     @Query("""
             UPDATE PaymentExportStaging s
-            SET s.status = 'PENDING'
+            SET s.status = 'PENDING',
+                s.retryCount = s.retryCount + 1
             WHERE s.status = 'FAILED'
               AND s.retryCount < :maxRetries
               AND s.createdAt >= :since

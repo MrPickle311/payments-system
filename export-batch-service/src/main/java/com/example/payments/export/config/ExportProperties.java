@@ -34,6 +34,6 @@ public class ExportProperties {
 
     @Data
     public static class RetryProperties {
-        private String schedule = "0 */5 * * * *";
+        private String schedule = "0/30 * * * * *";
     }
 }
