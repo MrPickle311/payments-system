@@ -14,6 +14,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import static com.example.payments.export.staging.PaymentExportStaging.ExportStatus.PENDING;
+
 @Slf4j
 @Component
 @Profile("listener")
@@ -40,13 +42,13 @@ public class LedgerEventListener {
     private PaymentExportStaging parseToStaging(String json) {
         try {
             LedgerEvent ledgerEvent = objectMapper.readValue(json, LedgerEvent.class);
-            return PaymentExportStaging.builder() // TODO: move it into mapper
+            return PaymentExportStaging.builder()
                     .paymentId(ledgerEvent.getPaymentId())
                     .grossAmount(ledgerEvent.getGrossAmount())
                     .netAmount(ledgerEvent.getNetAmount())
                     .currency(ledgerEvent.getCurrency())
                     .eventTimestamp(ledgerEvent.getTimestamp())
-                    .status(PaymentExportStaging.ExportStatus.PENDING)
+                    .status(PENDING)
                     .createdAt(ledgerEvent.getTimestamp())
                     .retryCount(0)
                     .build();

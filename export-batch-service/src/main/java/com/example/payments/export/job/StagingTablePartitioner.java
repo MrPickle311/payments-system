@@ -45,7 +45,7 @@ public class StagingTablePartitioner implements Partitioner {
         long rangeSize = Math.max(1, (maxId - minId + 1) / gridSize);
         Map<String, ExecutionContext> partitions = new HashMap<>();
         for (int i = 0; i < gridSize; i++) {
-            long partMin = minId + ((long) i * rangeSize);
+            long partMin = minId + (i * rangeSize);
             long partMax = (i == gridSize - 1) ? maxId : partMin + rangeSize - 1;
             ExecutionContext ctx = new ExecutionContext();
             ctx.putLong(MIN_ID, partMin);

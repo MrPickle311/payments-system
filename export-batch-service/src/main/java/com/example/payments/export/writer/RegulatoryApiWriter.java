@@ -29,6 +29,7 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class RegulatoryApiWriter implements ItemWriter<PaymentExportStaging> {
 
+    public static final String SHA_512 = "SHA-512";
     private final RestTemplate restTemplate;
     private final ExportProperties exportProperties;
     private final PaymentMapper paymentMapper;
@@ -68,7 +69,7 @@ public class RegulatoryApiWriter implements ItemWriter<PaymentExportStaging> {
 
     private String calculateChecksum(String input) {
         try {
-            MessageDigest digest = MessageDigest.getInstance(MD5_ALGORITHM);
+            MessageDigest digest = MessageDigest.getInstance(SHA_512);
             byte[] hash = digest.digest(input.getBytes());
             return IntStream.range(0, hash.length)
                     .mapToObj(i -> String.format("%02x", hash[i]))
