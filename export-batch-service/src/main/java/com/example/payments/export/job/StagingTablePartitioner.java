@@ -17,6 +17,8 @@ public class StagingTablePartitioner implements Partitioner {
     public static final String MIN_ID = "minId";
     public static final String MAX_ID = "maxId";
     public static final String LOOKBACK_SINCE = "lookbackSince";
+    public static final String SINGLE_NO_OP_PARTITION = "partition0";
+    public static final String PARTITION_NAME_PREFIX = "partition";
 
     private final PaymentExportStagingRepository stagingRepository;
     private final ExportProperties exportProperties;
@@ -24,35 +26,49 @@ public class StagingTablePartitioner implements Partitioner {
 
     @Override
     public Map<String, ExecutionContext> partition(int gridSize) {
-        // Cover current month + N past months to catch reset FAILED→PENDING rows from old partitions
-        LocalDateTime since = LocalDate.now(clock)
-                .minusMonths(exportProperties.getLookbackMonths())
-                .withDayOfMonth(1)
-                .atStartOfDay();
+        LocalDateTime since = calculateDateSinceNMonths();
 
         long minId = stagingRepository.findMinPendingId(since).orElse(0L);
         long maxId = stagingRepository.findMaxPendingId(since).orElse(0L);
+        var ctx = new ExecutionContext();
 
-        if (maxId < minId) {
-            // No pending rows — return a single no-op partition
-            ExecutionContext ctx = new ExecutionContext();
+        if (noRowsDetected(maxId, minId)) {
             ctx.putLong(MIN_ID, 0L);
             ctx.putLong(MAX_ID, -1L);
             ctx.put(LOOKBACK_SINCE, since.toString());
-            return Map.of("partition0", ctx);
+            return Map.of(SINGLE_NO_OP_PARTITION, ctx);
         }
 
-        long rangeSize = Math.max(1, (maxId - minId + 1) / gridSize);
+        long partitionSize = Math.max(1, (maxId - minId + 1) / gridSize);
         Map<String, ExecutionContext> partitions = new HashMap<>();
         for (int i = 0; i < gridSize; i++) {
-            long partMin = minId + (i * rangeSize);
-            long partMax = (i == gridSize - 1) ? maxId : partMin + rangeSize - 1;
-            ExecutionContext ctx = new ExecutionContext();
-            ctx.putLong(MIN_ID, partMin);
-            ctx.putLong(MAX_ID, partMax);
+            long firstPartitionId = minId + (i * partitionSize);
+            long partitionLastId = getPartitionLastIndex(gridSize, i, maxId, firstPartitionId, partitionSize);
+            ctx.putLong(MIN_ID, firstPartitionId);
+            ctx.putLong(MAX_ID, partitionLastId);
             ctx.put(LOOKBACK_SINCE, since.toString());
-            partitions.put("partition" + i, ctx);
+            partitions.put(PARTITION_NAME_PREFIX + i, ctx);
         }
         return partitions;
+    }
+
+    private static long getPartitionLastIndex(
+            int gridSize, int i, long maxId, long firstPartitionId, long partitionSize) {
+        if (i == gridSize - 1) {
+            return maxId;
+        }
+
+        return firstPartitionId + partitionSize - 1;
+    }
+
+    private LocalDateTime calculateDateSinceNMonths() {
+        return LocalDate.now(clock)
+                .minusMonths(exportProperties.getLookbackMonths())
+                .withDayOfMonth(1)
+                .atStartOfDay();
+    }
+
+    private static boolean noRowsDetected(long maxId, long minId) {
+        return maxId < minId;
     }
 }
