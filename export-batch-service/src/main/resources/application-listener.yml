@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────────
+# Profile: listener
+# Runs: LedgerEventListener (Kafka → staging table)
+# Does NOT run: batch job, retry launcher
+# Scale: replicas: N  (Kafka rebalances partitions automatically)
+# ─────────────────────────────────────────────────────────────────
+
+spring:
+  kafka:
+    consumer:
+      # First-boot fallback only — subsequent restarts use committed offset from __consumer_offsets
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:earliest}
+      max-poll-records: ${KAFKA_MAX_POLL_RECORDS:100}
+      properties:
+        max.poll.interval.ms: ${KAFKA_MAX_POLL_INTERVAL_MS:600000}
+        session.timeout.ms: ${KAFKA_SESSION_TIMEOUT_MS:60000}
+        heartbeat.interval.ms: ${KAFKA_HEARTBEAT_INTERVAL_MS:15000}
+
+  # Batch schema init still needed (Spring Batch tables) but job is never triggered
+  batch:
+    job:
+      enabled: false
+
+export:
+  topic: ${EXPORT_TOPIC:payment-ledger-events}
+  grid-size: ${EXPORT_GRID_SIZE:3}   # must match Kafka topic partition count
+
+logging:
+  level:
+    com.example.payments.export.listener: INFO

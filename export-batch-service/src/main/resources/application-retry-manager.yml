@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────────
+# Profile: retry-manager
+# Runs: FailedPaymentRetryLauncher (resets FAILED→PENDING, triggers job)
+# Does NOT run: Kafka listener, normal 30s scheduler
+# Scale: replicas: 1
+# ─────────────────────────────────────────────────────────────────
+
+spring:
+  batch:
+    job:
+      enabled: false  # triggered on demand by FailedPaymentRetryLauncher
+
+export:
+  topic: ${EXPORT_TOPIC:payment-ledger-events}
+  grid-size: ${EXPORT_GRID_SIZE:3}
+  batch-size: ${EXPORT_BATCH_SIZE:500}
+  lookback-months: ${EXPORT_LOOKBACK_MONTHS:3}
+  max-retry-count: ${EXPORT_MAX_RETRY_COUNT:3}
+  regulatory:
+    url: ${REGULATORY_API_URL:http://mock-regulatory-service:8084/api/v1/regulatory/report}
+  retry:
+    schedule: ${EXPORT_RETRY_SCHEDULE:0/10 * * * * *}
+
+logging:
+  level:
+    com.example.payments.export.job: INFO
+    com.example.payments.export.writer: INFO
+    org.springframework.batch: INFO
+server:
+  port: 8076

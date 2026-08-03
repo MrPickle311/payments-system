@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────────
+# Profile: manager
+# Runs: ExportJobLauncher (batch job every 30s) + pg_partman maintenance (hourly)
+# Does NOT run: Kafka listener, retry launcher
+# Scale: replicas: 1  (single scheduler — no duplicate job launches)
+# ─────────────────────────────────────────────────────────────────
+
+spring:
+  batch:
+    job:
+      enabled: false  # triggered manually by ExportJobLauncher scheduler
+
+export:
+  topic: ${EXPORT_TOPIC:payment-ledger-events}
+  grid-size: ${EXPORT_GRID_SIZE:3}
+  batch-size: ${EXPORT_BATCH_SIZE:500}
+  schedule: ${EXPORT_SCHEDULE:0/10 * * * * *}
+  lookback-months: ${EXPORT_LOOKBACK_MONTHS:3}
+  max-retry-count: ${EXPORT_MAX_RETRY_COUNT:3}
+  regulatory:
+    url: ${REGULATORY_API_URL:http://localhost:8084/api/v1/regulatory/report}
+
+logging:
+  level:
+    com.example.payments.export.job: INFO
+    com.example.payments.export.writer: INFO
+    org.springframework.batch: INFO
+
+server:
+  port: 8085
