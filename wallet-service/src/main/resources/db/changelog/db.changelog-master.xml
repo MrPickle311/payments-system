@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="1" author="gemini">
+        <createTable tableName="wallet_accounts">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="bigint"/>
+            <column name="balance" type="decimal(19,4)"/>
+            <column name="currency" type="text"/>
+            <column name="version" type="bigint"/>
+        </createTable>
+        <createTable tableName="idempotency_keys">
+            <column name="idempotency_key" type="text">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="status" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

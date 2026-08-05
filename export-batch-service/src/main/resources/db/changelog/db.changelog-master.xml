@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="1" author="gemini">
+        <createTable tableName="payment_export_staging">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="payment_id" type="bigint"/>
+            <column name="gross_amount" type="decimal(19,4)"/>
+            <column name="net_amount" type="decimal(19,4)"/>
+            <column name="currency" type="text"/>
+            <column name="event_timestamp" type="timestamp"/>
+            <column name="status" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retry_count" type="int"/>
+            <column name="created_at" type="timestamp"/>
+            <column name="exported_at" type="timestamp"/>
+            <column name="last_error" type="text"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

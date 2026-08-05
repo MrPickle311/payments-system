@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="1" author="gemini">
+        <createTable tableName="ledger_entries">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="payment_id" type="bigint"/>
+            <column name="gross_amount" type="decimal(19,4)"/>
+            <column name="net_amount" type="decimal(19,4)"/>
+            <column name="currency" type="text"/>
+            <column name="timestamp" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

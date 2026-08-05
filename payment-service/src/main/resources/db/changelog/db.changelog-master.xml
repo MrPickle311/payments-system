@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="1" author="gemini">
+        <createTable tableName="payments">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="transaction_id" type="text">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="amount" type="decimal(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fraud_score" type="int"/>
+            <column name="fraud_risk" type="text"/>
+            <column name="source_user_id" type="bigint"/>
+            <column name="target_user_id" type="bigint"/>
+            <column name="source_currency" type="text"/>
+            <column name="target_currency" type="text"/>
+            <column name="fee_amount" type="decimal(19,4)"/>
+            <column name="net_amount" type="decimal(19,4)"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+            <column name="version" type="bigint"/>
+        </createTable>
+
+        <createTable tableName="payment_history">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="payment_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="region" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_state" type="text"/>
+            <column name="to_state" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="outbox_events">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="aggregate_id" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="aggregate_type" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event_type" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="topic" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="processed" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

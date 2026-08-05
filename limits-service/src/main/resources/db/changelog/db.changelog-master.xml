@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="1" author="gemini">
+        <createTable tableName="daily_limit_records">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date" type="date">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount_used" type="decimal(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="bigint"/>
+        </createTable>
+        <addUniqueConstraint tableName="daily_limit_records" columnNames="user_id, date" constraintName="uc_daily_limit_user_date"/>
+
+        <createTable tableName="idempotency_keys">
+            <column name="idempotency_key" type="text">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="status" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
