@@ -1,70 +1,98 @@
 package com.example.payments.wallet.application;
 
-import com.example.payments.common.dto.DebitRequest;
-import com.example.payments.common.dto.DebitResponse;
-import com.example.payments.wallet.domain.WalletAccount;
+import static com.example.payments.wallet.common.WalletConstants.STATUS_INSUFFICIENT_FUNDS;
+import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
+
 import com.example.payments.wallet.application.port.WalletAccountPort;
+import com.example.payments.wallet.domain.WalletAccount;
+import com.example.payments.wallet.grpc.DebitRequest;
+import com.example.payments.wallet.infrastructure.persistence.IdempotencyKeyEntity;
+import com.example.payments.wallet.infrastructure.persistence.IdempotencyRepository;
 import io.micrometer.observation.annotation.Observed;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.UUID;
-
-import static com.example.payments.wallet.common.WalletConstants.REF_PREFIX;
-import static com.example.payments.wallet.common.WalletConstants.STATUS_INSUFFICIENT_FUNDS;
-import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WalletService {
 
-  public static final long DEFAULT_USER_IDENTIFIER = 1L;
-  public static final BigDecimal DEFAULT_MOCK_BALANCE = new BigDecimal("1000.00");
-  private final WalletAccountPort walletAccountPort;
+    public static final BigDecimal DEFAULT_MOCK_BALANCE = new BigDecimal("1000.00");
+    private final WalletAccountPort walletAccountPort;
+    private final IdempotencyRepository idempotencyRepository;
 
-  @Transactional
-  @Observed(name = "debit-wallet")
-  public DebitResponse debit(DebitRequest request) {
-    log.info("[WalletService] Processing debit for paymentId={} amount={} {}",
-        request.getPaymentId(), request.getAmount(), request.getCurrency());
-    WalletAccount account = getOrCreateAccount(request.getCurrency());
-    if (hasInsufficientFunds(account, request.getAmount())) {
-      return buildInsufficientFundsResponse(account, request.getAmount());
+    @Transactional
+    @Observed(name = "debit-between-users")
+    public String debitBetweenUsers(DebitRequest request) {
+        String key = request.getIdempotencyKey();
+        if (!key.isBlank()) {
+            var existing = idempotencyRepository.findById(key);
+            if (existing.isPresent()) {
+                log.warn("[WalletService] Duplicate debit, returning cached status for key={}", key);
+                return existing.get().getStatus();
+            }
+        }
+
+        BigDecimal amount = parseAmount(request.getAmount(), request.getPaymentId());
+        if (amount == null) {
+            return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
+        }
+        WalletAccount sourceWalletAccount =
+                getOrCreateAccountForUpdate(request.getSourceUserId(), request.getCurrency());
+        if (sourceWalletAccount.getBalance().compareTo(amount) < 0) {
+            return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
+        }
+        transferMoney(sourceWalletAccount, request.getTargetUserId(), amount, request.getCurrency());
+        return saveIdempotencyAndReturn(key, STATUS_SUCCESS);
     }
-    return processSuccessfulDebit(account, request);
-  }
 
-  private WalletAccount getOrCreateAccount(String currency) {
-    return walletAccountPort.findByUserIdAndCurrency(DEFAULT_USER_IDENTIFIER, currency)
-        .orElseGet(() -> createMockAccount(currency));
-  }
+    private String saveIdempotencyAndReturn(String key, String status) {
+        if (!key.isBlank()) {
+            idempotencyRepository.save(IdempotencyKeyEntity.builder()
+                    .idempotencyKey(key)
+                    .status(status)
+                    .build());
+        }
+        return status;
+    }
 
-  private WalletAccount createMockAccount(String currency) {
-    WalletAccount newAccount = WalletAccount.builder().id(DEFAULT_USER_IDENTIFIER)
-        .userId(DEFAULT_USER_IDENTIFIER).balance(DEFAULT_MOCK_BALANCE).currency(currency).build();
-    return walletAccountPort.save(newAccount);
-  }
+    private BigDecimal parseAmount(String amount, Long paymentId) {
+        try {
+            return new BigDecimal(amount);
+        } catch (NumberFormatException e) {
+            log.error("[WalletService] Invalid amount '{}' for paymentId={}", amount, paymentId, e);
+            return null;
+        }
+    }
 
-  private boolean hasInsufficientFunds(WalletAccount account, BigDecimal amount) {
-    return account.getBalance().compareTo(amount) < 0;
-  }
+    private void transferMoney(WalletAccount source, long targetId, BigDecimal amount, String currency) {
+        WalletAccount target = getOrCreateAccountForUpdate(targetId, currency);
+        source.setBalance(source.getBalance().subtract(amount));
+        target.setBalance(target.getBalance().add(amount));
+        walletAccountPort.save(source);
+        walletAccountPort.save(target);
+    }
 
-  private DebitResponse buildInsufficientFundsResponse(WalletAccount account, BigDecimal amount) {
-    log.warn("[WalletService] Insufficient funds for account userId={} balance={} requested={}",
-        account.getUserId(), account.getBalance(), amount);
-    return DebitResponse.builder().status(STATUS_INSUFFICIENT_FUNDS).build();
-  }
+    private WalletAccount getOrCreateAccountForUpdate(long userId, String currency) {
+        return walletAccountPort
+                .findByUserIdAndCurrencyForUpdate(userId, currency)
+                .orElseGet(() -> createMockAccount(userId, currency));
+    }
 
-  private DebitResponse processSuccessfulDebit(WalletAccount account, DebitRequest request) {
-    account.setBalance(account.getBalance().subtract(request.getAmount()));
-    walletAccountPort.save(account);
-    log.info("[WalletService] Debit successful for paymentId={} new balance={}",
-        request.getPaymentId(), account.getBalance());
-    return DebitResponse.builder().status(STATUS_SUCCESS)
-        .referenceId(REF_PREFIX + UUID.randomUUID()).build();
-  }
+    private WalletAccount createMockAccount(long userId, String currency) {
+        long uniqueAccountId = Math.abs(java.util.Objects.hash(userId, currency));
+        if (uniqueAccountId == userId) {
+            uniqueAccountId = uniqueAccountId + 1000000L;
+        }
+        WalletAccount newAccount = WalletAccount.builder()
+                .id(uniqueAccountId)
+                .userId(userId)
+                .balance(DEFAULT_MOCK_BALANCE)
+                .currency(currency)
+                .build();
+        return walletAccountPort.save(newAccount);
+    }
 }

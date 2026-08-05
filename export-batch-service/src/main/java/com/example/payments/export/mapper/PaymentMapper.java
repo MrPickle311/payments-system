@@ -1,13 +1,15 @@
 package com.example.payments.export.mapper;
 
-import com.example.payments.common.dto.LedgerEvent;
-import com.example.payments.export.dto.RegulatoryReportRequest;
-import org.mapstruct.Mapper;
-
 import static org.mapstruct.MappingConstants.ComponentModel.SPRING;
+
+import com.example.payments.export.dto.RegulatoryReportRequest;
+import com.example.payments.export.staging.PaymentExportStaging;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = SPRING)
 public interface PaymentMapper {
 
-  RegulatoryReportRequest.ExportedPayment toExportedPayment(LedgerEvent e);
+    @Mapping(source = "eventTimestamp", target = "timestamp")
+    RegulatoryReportRequest.ExportedPayment stagingToExportedPayment(PaymentExportStaging s);
 }

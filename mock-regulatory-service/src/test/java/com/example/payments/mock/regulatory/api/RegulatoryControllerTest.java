@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.payments.mock.regulatory.api.mapper.RegulatoryReportMapper;
 import com.example.payments.mock.regulatory.application.RegulatoryService;
 import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
-import com.example.payments.mock.regulatory.api.mapper.RegulatoryReportMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,49 +23,55 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(RegulatoryController.class)
 class RegulatoryControllerTest {
 
-  private static final String REPORT_ID = "report-123";
-  private static final String ACCEPTED = "ACCEPTED";
-  private static final String CHAOS = "CHAOS";
+    private static final String REPORT_ID = "report-123";
+    private static final String ACCEPTED = "ACCEPTED";
+    private static final String CHAOS = "CHAOS";
 
-  @Autowired
-  private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-  @MockitoBean
-  private RegulatoryService regulatoryService;
+    @MockitoBean
+    private RegulatoryService regulatoryService;
 
-  @MockitoBean
-  private RegulatoryReportMapper regulatoryReportMapper;
+    @MockitoBean
+    private RegulatoryReportMapper regulatoryReportMapper;
 
-  @Autowired
-  private ObjectMapper objectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-  @Test
-  void testReceiveReportSuccess() throws Exception {
-    RegulatoryReportRequest request =
-        RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
-    RegulatoryReportDto dto = new RegulatoryReportDto();
+    @Test
+    void testReceiveReportSuccess() throws Exception {
+        RegulatoryReportRequest request = RegulatoryReportRequest.builder()
+                .reportId(REPORT_ID)
+                .payments(List.of())
+                .build();
+        RegulatoryReportDto dto = new RegulatoryReportDto();
 
-    when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
-    when(regulatoryService.processReport(dto)).thenReturn(ACCEPTED);
+        when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
+        when(regulatoryService.processReport(dto)).thenReturn(ACCEPTED);
 
-    mockMvc
-        .perform(post(REGULATORY_PATH + REPORT_PATH).contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isOk()).andExpect(content().string(ACCEPTED));
-  }
+        mockMvc.perform(post(REGULATORY_PATH + REPORT_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(ACCEPTED));
+    }
 
-  @Test
-  void testReceiveReportFailure() throws Exception {
-    RegulatoryReportRequest request =
-        RegulatoryReportRequest.builder().reportId(REPORT_ID).payments(List.of()).build();
-    RegulatoryReportDto dto = new RegulatoryReportDto();
+    @Test
+    void testReceiveReportFailure() throws Exception {
+        RegulatoryReportRequest request = RegulatoryReportRequest.builder()
+                .reportId(REPORT_ID)
+                .payments(List.of())
+                .build();
+        RegulatoryReportDto dto = new RegulatoryReportDto();
 
-    when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
-    when(regulatoryService.processReport(dto)).thenThrow(new IllegalStateException(CHAOS));
+        when(regulatoryReportMapper.mapRequest(any())).thenReturn(dto);
+        when(regulatoryService.processReport(dto)).thenThrow(new IllegalStateException(CHAOS));
 
-    mockMvc
-        .perform(post(REGULATORY_PATH + REPORT_PATH).contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isInternalServerError()).andExpect(content().string(CHAOS));
-  }
+        mockMvc.perform(post(REGULATORY_PATH + REPORT_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string(CHAOS));
+    }
 }

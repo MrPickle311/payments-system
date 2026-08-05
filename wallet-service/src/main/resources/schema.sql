@@ -7,3 +7,9 @@ CREATE TABLE IF NOT EXISTS wallet_accounts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_wallet_accounts_user_id ON wallet_accounts(user_id);
+
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    idempotency_key VARCHAR(255) PRIMARY KEY,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

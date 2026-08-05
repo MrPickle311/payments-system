@@ -3,9 +3,9 @@ package com.example.payments.mock.regulatory.api;
 import static com.example.payments.mock.regulatory.common.RegulatoryConstants.REGULATORY_PATH;
 import static com.example.payments.mock.regulatory.common.RegulatoryConstants.REPORT_PATH;
 
+import com.example.payments.mock.regulatory.api.mapper.RegulatoryReportMapper;
 import com.example.payments.mock.regulatory.application.RegulatoryService;
 import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
-import com.example.payments.mock.regulatory.api.mapper.RegulatoryReportMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,17 +21,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RegulatoryController {
 
-  private final RegulatoryService regulatoryService;
-  private final RegulatoryReportMapper mapper;
+    private final RegulatoryService regulatoryService;
+    private final RegulatoryReportMapper mapper;
 
-  @PostMapping(REPORT_PATH)
-  public ResponseEntity<String> receiveReport(@RequestBody RegulatoryReportRequest request) {
-    try {
-      RegulatoryReportDto dto = mapper.mapRequest(request);
-      String response = regulatoryService.processReport(dto);
-      return ResponseEntity.ok(response);
-    } catch (IllegalStateException e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    @PostMapping(REPORT_PATH)
+    public ResponseEntity<String> receiveReport(@RequestBody RegulatoryReportRequest request) {
+        try {
+            RegulatoryReportDto dto = mapper.mapRequest(request);
+            String response = regulatoryService.processReport(dto);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
     }
-  }
 }

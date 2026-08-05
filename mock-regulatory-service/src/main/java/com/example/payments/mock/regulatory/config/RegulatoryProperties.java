@@ -10,5 +10,5 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 public class RegulatoryProperties {
-  private double failureRate = 0.2;
+    private double failureRate = 0.2;
 }

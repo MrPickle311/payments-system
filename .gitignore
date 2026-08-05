@@ -3,3 +3,16 @@ target
 .idea
 bruno-payments
 /architecture.md
+/fraud-service/fraud-service.iml
+/fee-service/fee-service.iml
+/fx-service/fx-service.iml
+/limits-service/limits-service.iml
+/sanctions-service/sanctions-service.iml
+/webhooks-service/webhooks-service.iml
+/payment-service/src/main/resources/application-local.yml
+/bruno/environments/Local.bru
+/bruno/bruno.json
+/bruno/Create Payment.bru
+/bruno/Execute Payment.bru
+/bruno/Get Payment.bru
+/bruno/Get Payment History.bru

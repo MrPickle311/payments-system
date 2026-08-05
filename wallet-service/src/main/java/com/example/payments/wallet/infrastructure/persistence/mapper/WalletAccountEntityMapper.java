@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface WalletAccountEntityMapper {
-  WalletAccount toDomain(WalletAccountEntity entity);
+    WalletAccount toDomain(WalletAccountEntity entity);
 
-  WalletAccountEntity toEntity(WalletAccount domain);
+    WalletAccountEntity toEntity(WalletAccount domain);
 }

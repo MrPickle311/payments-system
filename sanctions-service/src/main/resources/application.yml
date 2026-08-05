@@ -1,0 +1,10 @@
+server:
+  port: 0 # Random port for web, we won't use it much
+
+spring:
+  application:
+    name: sanctions-service
+
+grpc:
+  server:
+    port: 9091

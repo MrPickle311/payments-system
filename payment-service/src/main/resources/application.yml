@@ -7,6 +7,23 @@ spring:
   application:
     name: payment-service
 
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:2000ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2000ms}
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:${REDIS_HOST:redis}:${REDIS_PORT:6379}}
+
+  cache:
+    type: redis
+    cache-names:
+      - payments
+      - payment-details
+    redis:
+      time-to-live: 600000ms
+      cache-null-values: false
+
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -14,9 +31,15 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+      leak-detection-threshold: 30000
+      validation-timeout: 2500
+      connection-init-sql: >
+        SET statement_timeout = '5000';
+        SET lock_timeout = '3000';
+        SET idle_in_transaction_session_timeout = '30000';
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
@@ -28,6 +51,14 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+compensation:
+  topic: payment-compensations
+  consumer:
+    group-id: payment-service-compensation
 
   jpa:
     hibernate:
@@ -61,6 +92,30 @@ server:
 wallet:
   service:
     url: ${WALLET_SERVICE_URL:http://localhost:8081}
+
+grpc:
+  client:
+    authorization-service:
+      address: ${GRPC_AUTHORIZATION_SERVICE_ADDRESS:static://authorization-service:9091}
+      negotiation-type: ${GRPC_AUTHORIZATION_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fee-service:
+      address: ${GRPC_FEE_SERVICE_ADDRESS:static://fee-service:9091}
+      negotiation-type: ${GRPC_FEE_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fraud-service:
+      address: ${GRPC_FRAUD_SERVICE_ADDRESS:static://fraud-service:9091}
+      negotiation-type: ${GRPC_FRAUD_SERVICE_NEGOTIATION_TYPE:plaintext}
+    fx-service:
+      address: ${GRPC_FX_SERVICE_ADDRESS:static://fx-service:9091}
+      negotiation-type: ${GRPC_FX_SERVICE_NEGOTIATION_TYPE:plaintext}
+    limits-service:
+      address: ${GRPC_LIMITS_SERVICE_ADDRESS:static://limits-service:9091}
+      negotiation-type: ${GRPC_LIMITS_SERVICE_NEGOTIATION_TYPE:plaintext}
+    sanctions-service:
+      address: ${GRPC_SANCTIONS_SERVICE_ADDRESS:static://sanctions-service:9091}
+      negotiation-type: ${GRPC_SANCTIONS_SERVICE_NEGOTIATION_TYPE:plaintext}
+    wallet-service:
+      address: ${GRPC_WALLET_SERVICE_ADDRESS:static://wallet-service:9090}
+      negotiation-type: ${GRPC_WALLET_SERVICE_NEGOTIATION_TYPE:plaintext}
 
 logging:
   level:

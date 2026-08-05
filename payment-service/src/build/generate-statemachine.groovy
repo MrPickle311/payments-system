@@ -110,10 +110,14 @@ def parseLabel = { String label ->
     for (part in parts) {
         def p = part.trim()
 
-        // Guard: [guardName] or [guardName → description]
+        // Guard: [guardName], [!guardName], or [guardName → description]
         def guardMatch = (p =~ /\[([^\]]+)\]/)
         if (guardMatch.find()) {
             def guardContent = guardMatch.group(1).trim()
+            if (guardContent.startsWith('!')) {
+                guardContent = guardContent.substring(1).trim()
+                result.guardNegated = true
+            }
             if (guardContent.contains('→') || guardContent.contains('->')) {
                 result.guard = guardContent.split(/\s*[→\-\>]+\s*/)[0].trim()
                 result.guardNegated = true
@@ -172,18 +176,20 @@ def parseLabel = { String label ->
 //     it is treated as a region label rather than a state.
 // ---------------------------------------------------------------------------
 
-// First pass: identify composites that have '--' (orthogonal regions)
+// First pass: identify top-level composite states (states declared at root level containing sub-states or regions)
 Set<String> compositesWithRegions = new LinkedHashSet<>()
 List<String> tempStack = []
 for (line in cleaned) {
     def trimmed = line.trim()
     def cm = (trimmed =~ /^state\s+(\w+)\s*\{/)
     if (cm.find()) {
-        tempStack << cm.group(1)
+        def name = cm.group(1)
+        if (tempStack.isEmpty()) {
+            compositesWithRegions << name
+        }
+        tempStack << name
     } else if (trimmed == '}' && !tempStack.isEmpty()) {
         tempStack.removeLast()
-    } else if (trimmed == '--' && !tempStack.isEmpty()) {
-        compositesWithRegions << tempStack.last()
     }
 }
 
@@ -416,7 +422,7 @@ import org.springframework.statemachine.guard.Guard;
 public abstract class ${className}
         extends StateMachineConfigurerAdapter<${stateEnumSimple}, ${eventEnumSimple}> {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(${className}.class);
+    protected static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(${className}.class);
 """
 
 // --- Abstract guard methods ---
@@ -446,24 +452,28 @@ if (!actionNames.isEmpty()) {
     // Reactive Wrappers (Auto-generated)
     // =========================================================================
 
-    private final reactor.core.scheduler.Scheduler virtualThreadScheduler =
-            reactor.core.scheduler.Schedulers.fromExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+    private final java.util.concurrent.ExecutorService virtualThreadExecutor =
+            java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+
+    protected void sendFailureEvent(org.springframework.statemachine.StateContext<${stateEnumSimple}, ${eventEnumSimple}> context, Exception e) {
+        log.error("Unhandled exception in state machine action, transitioning to FAILED", e);
+        Long paymentId = context.getExtendedState().get("PAYMENT_ID", Long.class);
+        if (paymentId == null) return;
+        com.example.payment.application.saga.SagaContextProxy.sendEventWithRetries(context.getStateMachine(), ${eventEnumSimple}.FAIL, paymentId);
+    }
 
 """
     for (a in actionNames) {
         sb << """    protected org.springframework.statemachine.action.ReactiveAction<${stateEnumSimple}, ${eventEnumSimple}> ${a}() {
-        return context -> reactor.core.publisher.Mono.fromRunnable(() -> {
-            try {
-                execute${a.capitalize()}(context);
-            } catch (Exception e) {
-                if (e instanceof RuntimeException) throw (RuntimeException) e;
-                throw new RuntimeException(e);
-            }
-        })
-        .subscribeOn(virtualThreadScheduler)
-        .doOnError(e -> log.error("Unhandled exception in state machine action: ${a}", e))
-        .onErrorResume(e -> reactor.core.publisher.Mono.empty())
-        .then();
+        return context -> reactor.core.publisher.Mono.fromFuture(
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    execute${a.capitalize()}(context);
+                } catch (Exception e) {
+                    sendFailureEvent(context, e);
+                }
+            }, virtualThreadExecutor)
+        ).then();
     }
 
 """
