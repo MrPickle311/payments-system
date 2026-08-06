@@ -69,6 +69,6 @@ public class StagingTablePartitioner implements Partitioner {
     }
 
     private static boolean noRowsDetected(long maxId, long minId) {
-        return maxId < minId;
+        return maxId < minId || (maxId == 0 && minId == 0);
     }
 }
