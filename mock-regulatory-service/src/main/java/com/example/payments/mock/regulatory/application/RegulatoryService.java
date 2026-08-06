@@ -1,15 +1,14 @@
 package com.example.payments.mock.regulatory.application;
 
+import static com.example.payments.mock.regulatory.common.RegulatoryConstants.ACCEPTED_RESPONSE;
+import static com.example.payments.mock.regulatory.common.RegulatoryConstants.DUPLICATE_RESPONSE;
+
 import com.example.payments.mock.regulatory.application.dto.RegulatoryReportDto;
+import java.util.HashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import static com.example.payments.mock.regulatory.common.RegulatoryConstants.ACCEPTED_RESPONSE;
-import static com.example.payments.mock.regulatory.common.RegulatoryConstants.DUPLICATE_RESPONSE;
 
 @Slf4j
 @Service

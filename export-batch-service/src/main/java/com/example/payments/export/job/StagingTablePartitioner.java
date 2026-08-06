@@ -30,9 +30,8 @@ public class StagingTablePartitioner implements Partitioner {
 
         long minId = stagingRepository.findMinPendingId(since).orElse(0L);
         long maxId = stagingRepository.findMaxPendingId(since).orElse(0L);
-        var ctx = new ExecutionContext();
-
         if (noRowsDetected(maxId, minId)) {
+            var ctx = new ExecutionContext();
             ctx.putLong(MIN_ID, 0L);
             ctx.putLong(MAX_ID, -1L);
             ctx.put(LOOKBACK_SINCE, since.toString());
@@ -44,6 +43,7 @@ public class StagingTablePartitioner implements Partitioner {
         for (int i = 0; i < gridSize; i++) {
             long firstPartitionId = minId + (i * partitionSize);
             long partitionLastId = getPartitionLastIndex(gridSize, i, maxId, firstPartitionId, partitionSize);
+            var ctx = new ExecutionContext();
             ctx.putLong(MIN_ID, firstPartitionId);
             ctx.putLong(MAX_ID, partitionLastId);
             ctx.put(LOOKBACK_SINCE, since.toString());

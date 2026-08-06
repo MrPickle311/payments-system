@@ -1,7 +1,6 @@
 package com.example.payments.export.writer;
 
 import static com.example.payments.export.config.ExportConstants.FALLBACK_PREFIX;
-import static com.example.payments.export.config.ExportConstants.MD5_ALGORITHM;
 
 import com.example.payments.export.config.ExportProperties;
 import com.example.payments.export.dto.RegulatoryReportRequest;

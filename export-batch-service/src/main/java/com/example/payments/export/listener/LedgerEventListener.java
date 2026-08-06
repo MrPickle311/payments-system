@@ -1,5 +1,7 @@
 package com.example.payments.export.listener;
 
+import static com.example.payments.export.staging.PaymentExportStaging.ExportStatus.PENDING;
+
 import com.example.payments.common.dto.LedgerEvent;
 import com.example.payments.export.staging.PaymentExportStaging;
 import com.example.payments.export.staging.PaymentExportStagingRepository;
@@ -13,8 +15,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-
-import static com.example.payments.export.staging.PaymentExportStaging.ExportStatus.PENDING;
 
 @Slf4j
 @Component
