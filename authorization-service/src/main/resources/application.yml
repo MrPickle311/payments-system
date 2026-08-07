@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: authorization-service
+  threads:
+    virtual:
+      enabled: true
 
 grpc:
   server:

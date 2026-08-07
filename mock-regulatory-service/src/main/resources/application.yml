@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: mock-regulatory-service
+  threads:
+    virtual:
+      enabled: true
 
 logging:
   level:

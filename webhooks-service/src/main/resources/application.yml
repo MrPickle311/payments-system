@@ -1,6 +1,11 @@
 spring:
   application:
     name: webhooks-service
+  liquibase:
+    enabled: false
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/titan_db}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}

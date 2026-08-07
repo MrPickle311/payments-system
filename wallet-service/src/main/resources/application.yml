@@ -20,6 +20,9 @@ management:
 spring:
   application:
     name: wallet-service
+  threads:
+    virtual:
+      enabled: true
 
   liquibase:
     enabled: true

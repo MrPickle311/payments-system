@@ -12,6 +12,9 @@ server:
 spring:
   application:
     name: export-batch-service
+  threads:
+    virtual:
+      enabled: true
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/payment_batch_db}

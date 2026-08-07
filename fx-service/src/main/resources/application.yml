@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: fx-service
+  threads:
+    virtual:
+      enabled: true
   data:
     redis:
       password: ${REDIS_PASSWORD:}

@@ -6,6 +6,9 @@ jdbc:
 spring:
   application:
     name: payment-service
+  threads:
+    virtual:
+      enabled: true
 
   data:
     redis:

@@ -24,6 +24,9 @@ jdbc:
 spring:
   application:
     name: ledger-service
+  threads:
+    virtual:
+      enabled: true
 
   liquibase:
     enabled: true
