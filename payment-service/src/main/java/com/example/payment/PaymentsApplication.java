@@ -1,5 +1,7 @@
 package com.example.payment;
 
+import io.pyroscope.javaagent.PyroscopeAgent;
+import io.pyroscope.javaagent.config.Config;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -24,6 +26,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class PaymentsApplication {
 
     public static void main(String[] args) {
+        PyroscopeAgent.start(new PyroscopeAgent.Options.Builder(Config.build()).build());
         SpringApplication.run(PaymentsApplication.class, args);
     }
 }
