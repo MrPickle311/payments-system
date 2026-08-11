@@ -167,10 +167,6 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-liquibase</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
@@ -194,6 +190,19 @@
                             </goals>
                         </execution>
                     </executions>
+                    <configuration>
+                        <image>
+                            <builder>paketobuildpacks/builder-jammy-tiny:latest</builder>
+                            <env>
+                                <BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
+                                <BP_JVM_JLINK_ENABLED>true</BP_JVM_JLINK_ENABLED>
+                                <BP_JVM_JLINK_ARGS>--no-man-pages --no-header-files --strip-debug --compress=2 --add-modules jdk.unsupported,java.instrument,java.management,java.naming,java.sql,java.desktop,java.security.jgss,java.net.http</BP_JVM_JLINK_ARGS>
+                                <SPRING_THREADS_VIRTUAL_ENABLED>true</SPRING_THREADS_VIRTUAL_ENABLED>
+                                <BP_UNPACK_LAYOUT_ONLY>true</BP_UNPACK_LAYOUT_ONLY>
+                                <JAVA_TOOL_OPTIONS>-XX:+UseCompactObjectHeaders</JAVA_TOOL_OPTIONS>
+                            </env>
+                        </image>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
