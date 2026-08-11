@@ -1,5 +1,7 @@
 package com.example.payment.infrastructure.config;
 
+import io.micrometer.context.ContextExecutorService;
+import io.micrometer.context.ContextSnapshotFactory;
 import java.time.Clock;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -11,7 +13,8 @@ public class GlobalConfig {
 
     @Bean
     public ExecutorService virtualThreadExecutor() {
-        return Executors.newVirtualThreadPerTaskExecutor();
+        return ContextExecutorService.wrap(
+                Executors.newVirtualThreadPerTaskExecutor(), ContextSnapshotFactory.builder().build());
     }
 
     @Bean

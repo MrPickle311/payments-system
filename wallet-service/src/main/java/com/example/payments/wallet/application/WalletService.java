@@ -1,5 +1,6 @@
 package com.example.payments.wallet.application;
 
+import static com.example.payments.wallet.common.WalletConstants.STATUS_IN_PROGRESS;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_INSUFFICIENT_FUNDS;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 
@@ -29,10 +30,13 @@ public class WalletService {
     public String debitBetweenUsers(DebitRequest request) {
         String key = request.getIdempotencyKey();
         if (!key.isBlank()) {
-            var existing = idempotencyRepository.findById(key);
-            if (existing.isPresent()) {
+            int claimed = idempotencyRepository.tryInsert(key, STATUS_IN_PROGRESS);
+            if (claimed == 0) {
                 log.warn("[WalletService] Duplicate debit, returning cached status for key={}", key);
-                return existing.get().getStatus();
+                return idempotencyRepository
+                        .findById(key)
+                        .map(IdempotencyKeyEntity::getStatus)
+                        .orElse(STATUS_IN_PROGRESS);
             }
         }
 
@@ -40,17 +44,20 @@ public class WalletService {
         if (amount == null) {
             return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }
+        log.info("Attempting to getOrCreateAccountForUpdate: {}", request.getPaymentId());
         WalletAccount sourceWalletAccount =
                 getOrCreateAccountForUpdate(request.getSourceUserId(), request.getCurrency());
         if (sourceWalletAccount.getBalance().compareTo(amount) < 0) {
             return saveIdempotencyAndReturn(key, STATUS_INSUFFICIENT_FUNDS);
         }
+        log.info("Attempting to transferMoney: {}", request.getPaymentId());
         transferMoney(sourceWalletAccount, request.getTargetUserId(), amount, request.getCurrency());
         return saveIdempotencyAndReturn(key, STATUS_SUCCESS);
     }
 
     private String saveIdempotencyAndReturn(String key, String status) {
         if (!key.isBlank()) {
+            log.info("Attempting to save idempotency key for key: {}, status: {}", key, status);
             idempotencyRepository.save(IdempotencyKeyEntity.builder()
                     .idempotencyKey(key)
                     .status(status)
