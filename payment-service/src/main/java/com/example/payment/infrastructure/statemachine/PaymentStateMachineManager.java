@@ -69,7 +69,7 @@ public class PaymentStateMachineManager {
         extState.putIfAbsent(TARGET_CURRENCY, payment.getTargetCurrency());
     }
 
-    private PaymentState processStateMachineEvent(
+    private void processStateMachineEvent(
             StateMachine<PaymentState, PaymentEvent> sm, Payment payment, PaymentEvent event) {
         Collection<PaymentState> before = sm.getState().getIds();
         PaymentState rootBefore = payment.currentState();
@@ -87,7 +87,6 @@ public class PaymentStateMachineManager {
 
         stateMachinePersister.persist(sm, payment);
         payment.publishStateChange(rootBefore, rootAfter);
-        return rootAfter;
     }
 
     private void stopIfTerminal(StateMachine<PaymentState, PaymentEvent> sm, Payment payment) {

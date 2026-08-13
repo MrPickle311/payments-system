@@ -452,14 +452,21 @@ if (!actionNames.isEmpty()) {
     // Reactive Wrappers (Auto-generated)
     // =========================================================================
 
-    private final java.util.concurrent.ExecutorService virtualThreadExecutor =
-            java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+    /**
+     * Executor for every action body. Abstract so the subclass can supply the shared,
+     * context-propagating executor bean — the lambdas below close over whatever is in scope here, so
+     * a subclass field alone can't override it. Must permit blocking: actions call {@code sendEvent}.
+     */
+    protected abstract java.util.concurrent.ExecutorService virtualThreadExecutor();
 
     protected void sendFailureEvent(org.springframework.statemachine.StateContext<${stateEnumSimple}, ${eventEnumSimple}> context, Exception e) {
         log.error("Unhandled exception in state machine action, transitioning to FAILED", e);
         Long paymentId = context.getExtendedState().get("PAYMENT_ID", Long.class);
-        if (paymentId == null) return;
-        com.example.payment.application.saga.SagaContextProxy.sendEventWithRetries(context.getStateMachine(), ${eventEnumSimple}.FAIL, paymentId);
+        if (paymentId == null) {
+            log.error("Cannot transition to FAILED - no PAYMENT_ID in extended state; payment may be stranded", e);
+            return;
+        }
+        com.example.payment.application.saga.SagaContextProxy.sendEventAndReportAcceptance(context.getStateMachine(), ${eventEnumSimple}.FAIL, paymentId);
     }
 
 """
@@ -472,7 +479,7 @@ if (!actionNames.isEmpty()) {
                 } catch (Exception e) {
                     sendFailureEvent(context, e);
                 }
-            }, virtualThreadExecutor)
+            }, virtualThreadExecutor())
         ).then();
     }
 

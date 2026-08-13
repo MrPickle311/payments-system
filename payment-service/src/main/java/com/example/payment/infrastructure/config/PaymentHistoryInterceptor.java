@@ -7,6 +7,7 @@ import com.example.payment.domain.PaymentHistory;
 import com.example.payment.domain.PaymentHistoryRepository;
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
+import com.example.payment.domain.saga.SagaRegion;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PaymentHistoryInterceptor extends StateMachineListenerAdapter<PaymentState, PaymentEvent> {
 
-    private static final String ROOT_REGION = "ROOT";
+    private static final String ROOT_REGION = SagaRegion.ROOT_REGION;
     public static final String AUTO = "AUTO";
 
     private final PaymentHistoryRepository paymentHistoryRepository;
@@ -76,14 +77,6 @@ public class PaymentHistoryInterceptor extends StateMachineListenerAdapter<Payme
         if (context.getTarget() == null) {
             return ROOT_REGION;
         }
-        PaymentState state = context.getTarget().getId();
-        return switch (state) {
-            case AUTH_PENDING, AUTH_APPROVED, AUTH_REJECTED, AUTHORIZED -> "Authorization";
-            case FRAUD_EVALUATING, FRAUD_PASSED, FRAUD_DETECTED, FRAUD_FAILED -> "FraudCheck";
-            case LIMITS_EVALUATING, LIMITS_OK, LIMITS_EXCEEDED -> "LimitsCheck";
-            case SANCTIONS_EVALUATING, SANCTIONS_CLEARED, SANCTIONS_HIT -> "SanctionsCheck";
-            case FEE_EVALUATING, FEE_CALCULATED, FEE_CHARGED, FEE_FAILED -> "FeeCheck";
-            default -> ROOT_REGION;
-        };
+        return SagaRegion.labelOf(context.getTarget().getId());
     }
 }

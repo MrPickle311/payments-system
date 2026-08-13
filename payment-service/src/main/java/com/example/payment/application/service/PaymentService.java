@@ -101,11 +101,42 @@ public class PaymentService {
     public void forceTimeout(Long paymentId) {
         Payment payment =
                 paymentRepository.findById(paymentId).orElseThrow(() -> new PaymentNotFoundException(paymentId));
-        if (!"PROCESSING".equals(payment.getState())) {
+        if (payment.isTerminal()) {
             return;
         }
-        log.warn("[Timeout] Forcing FAIL for stuck paymentId={}", paymentId);
+        log.warn("[Timeout] Forcing FAIL for stuck paymentId={} in state {}", paymentId, payment.getState());
         stateMachineManager.execute(payment, PaymentEvent.FAIL);
         savePayment(paymentId, payment);
+    }
+
+    /**
+     * Re-deliver a join event to a freshly restored machine, for the recovery pollers. Safe to call
+     * repeatedly — downstream idempotency keys prevent a redundant redrive from double-debiting.
+     *
+     * @return {@code false} if the machine refused the event; the caller should leave it outstanding.
+     */
+    @Transactional(noRollbackFor = InvalidTransitionException.class)
+    public boolean redriveJoin(Long paymentId, PaymentEvent event) {
+        Payment payment = paymentRepository.findById(paymentId).orElse(null);
+        if (payment == null) {
+            log.warn("[JoinRecovery] Payment {} no longer exists", paymentId);
+            return true;
+        }
+        if (payment.isTerminal()) {
+            return true;
+        }
+        try {
+            log.warn(
+                    "[JoinRecovery] Re-driving {} for payment {} stuck in state {}",
+                    event,
+                    paymentId,
+                    payment.getState());
+            stateMachineManager.execute(payment, event);
+            savePayment(paymentId, payment);
+            return true;
+        } catch (InvalidTransitionException e) {
+            log.error("[JoinRecovery] Payment {} refused re-driven event {}", paymentId, event, e);
+            return false;
+        }
     }
 }

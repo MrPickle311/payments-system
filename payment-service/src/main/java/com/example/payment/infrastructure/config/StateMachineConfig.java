@@ -4,6 +4,7 @@ import com.example.payment.application.saga.PaymentProcessingSaga;
 import com.example.payment.application.saga.SagaContextProxy;
 import com.example.payment.domain.enums.PaymentEvent;
 import com.example.payment.domain.enums.PaymentState;
+import java.util.concurrent.ExecutorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,12 @@ import org.springframework.statemachine.guard.Guard;
 public class StateMachineConfig extends GeneratedStateMachineConfig {
 
     private final PaymentProcessingSaga paymentProcessingSaga;
+    private final ExecutorService virtualThreadExecutor;
+
+    @Override
+    protected ExecutorService virtualThreadExecutor() {
+        return virtualThreadExecutor;
+    }
 
     @Override
     protected void executeSyncFxCall(StateContext<PaymentState, PaymentEvent> context) {

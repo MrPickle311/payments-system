@@ -99,18 +99,35 @@ public class SagaContextProxy {
         }
     }
 
-    public void sendEvent(PaymentEvent event) {
-        if (stateMachine != null) {
-            sendEventWithRetries(stateMachine, event, getPaymentId());
+    /**
+     * @return {@code true} if the machine accepted the event; {@code false} if it was denied or
+     *     there is no machine on this proxy (see {@link #of(ExtendedState)}).
+     */
+    public boolean sendEvent(PaymentEvent event) {
+        if (stateMachine == null) {
+            log.error("[SagaContext] Cannot send {} - no state machine on this proxy", event);
+            return false;
         }
+        return sendEventAndReportAcceptance(stateMachine, event, getPaymentId());
     }
 
-    public static void sendEventWithRetries(
+    /**
+     * Send {@code event} and report whether the machine accepted it.
+     */
+    public static boolean sendEventAndReportAcceptance(
             StateMachine<PaymentState, PaymentEvent> sm, PaymentEvent event, Long paymentId) {
         var message = MessageBuilder.withPayload(event)
                 .setHeader(PAYMENT_ID, paymentId)
                 .build();
-        sm.sendEvent(message);
+        boolean accepted = sm.sendEvent(message);
+        if (!accepted) {
+            log.error(
+                    "[SagaContext] Event {} was DENIED for payment {} in state {} - no matching transition",
+                    event,
+                    paymentId,
+                    sm.getState() != null ? sm.getState().getIds() : null);
+        }
+        return accepted;
     }
 
     public BigDecimal getPaymentAmountAsBigDecimal() {

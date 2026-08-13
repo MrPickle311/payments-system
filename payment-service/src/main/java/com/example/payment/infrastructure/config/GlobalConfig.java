@@ -14,7 +14,8 @@ public class GlobalConfig {
     @Bean
     public ExecutorService virtualThreadExecutor() {
         return ContextExecutorService.wrap(
-                Executors.newVirtualThreadPerTaskExecutor(), ContextSnapshotFactory.builder().build());
+                Executors.newVirtualThreadPerTaskExecutor(),
+                ContextSnapshotFactory.builder().build());
     }
 
     @Bean

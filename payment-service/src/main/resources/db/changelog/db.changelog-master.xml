@@ -87,4 +87,63 @@
         </createTable>
     </changeSet>
 
+    <!--
+      Durable, cross-process guard + work queue for parallel-saga join dispatch.
+      UNIQUE (payment_id, join_key) is the guard: whoever inserts the row owns the dispatch.
+    -->
+    <changeSet id="2" author="claude">
+        <createTable tableName="saga_pending_events">
+            <column name="id" type="bigserial">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="payment_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="event" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="join_key" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attempts" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_error" type="text"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp"/>
+        </createTable>
+
+        <addUniqueConstraint
+                tableName="saga_pending_events"
+                columnNames="payment_id, join_key"
+                constraintName="uk_saga_pending_events_payment_join"/>
+
+        <createIndex tableName="saga_pending_events" indexName="idx_saga_pending_events_status">
+            <column name="status"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!--
+      Lease columns for the layer-1 recovery poller: UNIQUE (payment_id, join_key) arbitrates the
+      first claim, but not a retry of an existing PENDING row. A time-boxed conditional-update lease
+      makes exactly one polling pod win each row per sweep.
+    -->
+    <changeSet id="3" author="claude">
+        <addColumn tableName="saga_pending_events">
+            <column name="locked_by" type="text"/>
+            <column name="locked_until" type="timestamp"/>
+        </addColumn>
+
+        <createIndex tableName="saga_pending_events" indexName="idx_saga_pending_events_lease">
+            <column name="status"/>
+            <column name="locked_until"/>
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

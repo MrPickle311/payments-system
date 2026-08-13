@@ -25,7 +25,8 @@ public class ObservationConfig {
     @Bean
     @ConditionalOnMissingBean
     public Resource otelResource(@Value("${spring.application.name}") String applicationName) {
-        return Resource.getDefault().merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, applicationName)));
+        return Resource.getDefault()
+                .merge(Resource.create(Attributes.of(ServiceAttributes.SERVICE_NAME, applicationName)));
     }
 
     @Bean
