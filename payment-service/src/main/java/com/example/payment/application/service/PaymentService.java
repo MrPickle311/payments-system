@@ -105,7 +105,7 @@ public class PaymentService {
             return;
         }
         log.warn("[Timeout] Forcing FAIL for stuck paymentId={} in state {}", paymentId, payment.getState());
-        stateMachineManager.execute(payment, PaymentEvent.FAIL);
+        stateMachineManager.execute(payment, PaymentEvent.TIMEOUT);
         savePayment(paymentId, payment);
     }
 

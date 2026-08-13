@@ -6,6 +6,7 @@ public enum PaymentEvent {
     AUTHORIZE,
     COMPLETE,
     FAIL,
+    TIMEOUT,
 
     AUTH_SUCCESS,
     AUTH_REJECT,
