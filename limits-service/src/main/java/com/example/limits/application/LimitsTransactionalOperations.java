@@ -72,8 +72,7 @@ class LimitsTransactionalOperations {
         saveIdempotencyAndReturn(idempotencyKey, true);
     }
 
-    private void handleLimitExceeded(
-            Long userId, BigDecimal amountUsed, BigDecimal requested, String idempotencyKey) {
+    private void handleLimitExceeded(Long userId, BigDecimal amountUsed, BigDecimal requested, String idempotencyKey) {
         log.warn(
                 "[LimitsService] Daily limit exceeded userId={} amountUsed={} requested={}",
                 userId,

@@ -10,12 +10,10 @@ import org.springframework.stereotype.Repository;
 public interface IdempotencyRepository extends JpaRepository<IdempotencyKeyEntity, String> {
 
     @Modifying
-    @Query(
-            value = """
+    @Query(value = """
         INSERT INTO idempotency_keys (idempotency_key, status, created_at)
         VALUES (:key, 'PENDING', now())
         ON CONFLICT (idempotency_key) DO NOTHING
-        """,
-            nativeQuery = true)
+        """, nativeQuery = true)
     int tryInsert(@Param("key") String key);
 }
