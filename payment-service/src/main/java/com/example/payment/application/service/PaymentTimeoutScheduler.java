@@ -29,7 +29,6 @@ public class PaymentTimeoutScheduler {
      * fixedDelay (not fixedRate) ensures runs never overlap within the same pod.
      */
     @Scheduled(fixedDelay = 60_000)
-    @Transactional(readOnly = true)
     public void sweepStuckPayments() {
         var threshold = OffsetDateTime.now(clock).minusMinutes(STUCK_THRESHOLD_MINUTES);
         List<PaymentJpaEntity> stuck = paymentRepository.findStuckPayments(threshold, BATCH_SIZE);

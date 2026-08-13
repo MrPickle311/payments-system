@@ -17,12 +17,10 @@ public interface IdempotencyRepository extends JpaRepository<IdempotencyKeyEntit
      * same @Transactional method.
      */
     @Modifying
-    @Query(
-            value = """
+    @Query(value = """
         INSERT INTO idempotency_keys (idempotency_key, status, created_at)
         VALUES (:key, :status, now())
         ON CONFLICT (idempotency_key) DO NOTHING
-        """,
-            nativeQuery = true)
+        """, nativeQuery = true)
     int tryInsert(@Param("key") String key, @Param("status") String status);
 }

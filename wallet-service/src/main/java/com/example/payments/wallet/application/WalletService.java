@@ -1,7 +1,7 @@
 package com.example.payments.wallet.application;
 
-import static com.example.payments.wallet.common.WalletConstants.STATUS_IN_PROGRESS;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_INSUFFICIENT_FUNDS;
+import static com.example.payments.wallet.common.WalletConstants.STATUS_IN_PROGRESS;
 import static com.example.payments.wallet.common.WalletConstants.STATUS_SUCCESS;
 
 import com.example.payments.wallet.application.port.WalletAccountPort;
