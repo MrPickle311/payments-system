@@ -52,10 +52,21 @@ class LedgerServiceTest {
     @Test
     void recordEventSavesLedgerEntry() {
         when(ledgerMapper.toEntity(event)).thenReturn(entry);
+        when(ledgerRepository.tryInsert(entry)).thenReturn(true);
 
         ledgerService.recordEvent(event);
 
         verify(ledgerMapper, times(1)).toEntity(event);
-        verify(ledgerRepository, times(1)).save(entry);
+        verify(ledgerRepository, times(1)).tryInsert(entry);
+    }
+
+    @Test
+    void recordEventIgnoresDuplicate() {
+        when(ledgerMapper.toEntity(event)).thenReturn(entry);
+        when(ledgerRepository.tryInsert(entry)).thenReturn(false);
+
+        ledgerService.recordEvent(event);
+
+        verify(ledgerRepository, times(1)).tryInsert(entry);
     }
 }

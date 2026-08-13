@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.payments.ledger.domain.LedgerEntry;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,25 +27,51 @@ class LedgerRepositoryAdapterTest {
     private LedgerRepositoryAdapter adapter;
 
     @Test
-    void saveDelegatesToRepository() {
-        LedgerEntry entry = createEntry(null);
-        LedgerEntry savedEntry = createEntry(100L);
+    void tryInsertReturnsTrueWhenInserted() {
+        LedgerEntry entry = createEntry();
+        when(repository.tryInsert(
+                        entry.getPaymentId(),
+                        entry.getGrossAmount(),
+                        entry.getNetAmount(),
+                        entry.getCurrency(),
+                        entry.getTimestamp()))
+                .thenReturn(1);
 
-        when(repository.save(entry)).thenReturn(savedEntry);
+        boolean result = adapter.tryInsert(entry);
 
-        LedgerEntry result = adapter.save(entry);
-
-        verify(repository, times(1)).save(entry);
-        assertThat(result).isEqualTo(savedEntry);
+        verify(repository, times(1))
+                .tryInsert(
+                        entry.getPaymentId(),
+                        entry.getGrossAmount(),
+                        entry.getNetAmount(),
+                        entry.getCurrency(),
+                        entry.getTimestamp());
+        assertThat(result).isTrue();
     }
 
-    private LedgerEntry createEntry(Long id) {
+    @Test
+    void tryInsertReturnsFalseOnDuplicate() {
+        LedgerEntry entry = createEntry();
+        when(repository.tryInsert(
+                        entry.getPaymentId(),
+                        entry.getGrossAmount(),
+                        entry.getNetAmount(),
+                        entry.getCurrency(),
+                        entry.getTimestamp()))
+                .thenReturn(0);
+
+        boolean result = adapter.tryInsert(entry);
+
+        assertThat(result).isFalse();
+    }
+
+    private LedgerEntry createEntry() {
         LedgerEntry e = new LedgerEntry();
-        e.setId(id);
         e.setPaymentId(1L);
         e.setGrossAmount(new BigDecimal(AMOUNT_STR));
         e.setNetAmount(new BigDecimal(AMOUNT_STR));
         e.setCurrency(CURRENCY_USD);
+        e.setTimestamp(LocalDateTime.now());
         return e;
     }
 }
