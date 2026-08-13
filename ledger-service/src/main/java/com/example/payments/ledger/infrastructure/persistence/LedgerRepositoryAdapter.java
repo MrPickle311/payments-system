@@ -12,7 +12,13 @@ public class LedgerRepositoryAdapter implements LedgerRepository {
     private final LedgerEntryRepository repository;
 
     @Override
-    public LedgerEntry save(LedgerEntry entry) {
-        return repository.save(entry);
+    public boolean tryInsert(LedgerEntry entry) {
+        int inserted = repository.tryInsert(
+                entry.getPaymentId(),
+                entry.getGrossAmount(),
+                entry.getNetAmount(),
+                entry.getCurrency(),
+                entry.getTimestamp());
+        return inserted > 0;
     }
 }

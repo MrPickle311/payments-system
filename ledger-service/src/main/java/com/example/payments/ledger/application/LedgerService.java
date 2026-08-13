@@ -24,7 +24,11 @@ public class LedgerService {
 
         LedgerEntry entry = ledgerMapper.toEntity(event);
 
-        ledgerRepository.save(entry);
+        boolean inserted = ledgerRepository.tryInsert(entry);
+        if (!inserted) {
+            log.warn("[LedgerService] Duplicate ledger event ignored for paymentId={}", event.getPaymentId());
+            return;
+        }
         log.info("[LedgerService] Ledger entry saved for paymentId={}", event.getPaymentId());
     }
 }
