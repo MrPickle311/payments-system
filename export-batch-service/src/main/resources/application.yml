@@ -42,6 +42,10 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      sasl.mechanism: OAUTHBEARER
+      sasl.login.callback.handler.class: io.strimzi.kafka.oauth.client.JaasClientOauthLoginCallbackHandler
+      sasl.jaas.config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required oauth.client.id="${KAFKA_OAUTH_CLIENT_ID:}" oauth.client.secret="${KAFKA_OAUTH_CLIENT_SECRET:}" oauth.token.endpoint.uri="${KAFKA_OAUTH_TOKEN_ENDPOINT:}";
     consumer:
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
